@@ -1,0 +1,96 @@
+# GraphRAG CTI Platform — four NoSQL stores (+ optional app containers and local LLM).
+#   docker compose up -d                       -> Neo4j, MongoDB, Redis, Qdrant only (run API/UI locally)
+#   docker compose --profile app up -d --build -> + FastAPI + analyst console
+#   docker compose --profile llm up -d         -> + Ollama (local LLM, NFR1)
+services:
+  neo4j:
+    image: neo4j:5.26-community
+    container_name: cti-neo4j
+    ports: ["7474:7474", "7687:7687"]
+    environment:
+      NEO4J_AUTH: neo4j/ctiplatform
+      NEO4J_server_memory_heap_max__size: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p ctiplatform 'RETURN 1' || exit 1"]
+      interval: 8s
+      timeout: 10s
+      retries: 20
+      start_period: 25s
+    volumes: [neo4j_data:/data]
+
+  mongo:
+    image: mongo:7
+    container_name: cti-mongo
+    ports: ["27017:27017"]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 8s
+      timeout: 5s
+      retries: 12
+    volumes: [mongo_data:/data/db]
+
+  redis:
+    image: redis:7-alpine
+    container_name: cti-redis
+    ports: ["6379:6379"]
+    # AOF persistence so the hot blocklist survives a restart; TTLs keep ticking.
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes: [redis_data:/data]
+
+  qdrant:
+    image: qdrant/qdrant:v1.13.4
+    container_name: cti-qdrant
+    ports: ["6333:6333", "6334:6334"]
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/6333'"]
+      interval: 8s
+      timeout: 5s
+      retries: 12
+    volumes: [qdrant_data:/qdrant/storage]
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: cti-ollama
+    profiles: ["llm"]
+    ports: ["11434:11434"]
+    volumes: [ollama_data:/root/.ollama]
+
+  api:
+    build: ./backend
+    container_name: cti-api
+    profiles: ["app"]
+    ports: ["8000:8000"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NEO4J_URI: bolt://neo4j:7687
+      MONGO_URI: mongodb://mongo:27017
+      REDIS_URL: redis://redis:6379/0
+      QDRANT_HOST: qdrant
+      OLLAMA_URL: ${OLLAMA_URL_DOCKER:-http://host.docker.internal:11434}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    depends_on:
+      neo4j: {condition: service_healthy}
+      mongo: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      qdrant: {condition: service_healthy}
+
+  web:
+    build: ./frontend
+    container_name: cti-web
+    profiles: ["app"]
+    ports: ["5173:80"]
+    depends_on: [api]
+
+volumes:
+  neo4j_data:
+  mongo_data:
+  redis_data:
+  qdrant_data:
+  ollama_data:

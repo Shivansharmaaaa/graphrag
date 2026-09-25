@@ -1,0 +1,13 @@
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+neo4j==5.28.1
+pymongo==4.13.2
+redis==6.2.0
+qdrant-client==1.14.3
+httpx==0.28.1
+pydantic-settings==2.10.1
+numpy==2.2.6
+scikit-learn==1.6.1
+PyJWT==2.10.1
+python-multipart==0.0.20
+pytest==8.4.1

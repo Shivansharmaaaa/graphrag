@@ -1,0 +1,50 @@
+{
+  "ioc:domain:avsvmcloud.com": {
+    "value": "{\"value\": \"avsvmcloud.com\", \"type\": \"domain\", \"actor\": \"apt29\", \"campaign\": \"solarwinds\", \"severity\": \"critical\", \"ttl\": 1209600, \"published_by\": \"seed\", \"published_at\": 1790357909, \"source\": null}",
+    "ttl_s": 1208170
+  },
+  "ioc:ip:45.77.12.90": {
+    "value": "{\"value\": \"45.77.12.90\", \"type\": \"ip\", \"actor\": \"apt41\", \"campaign\": \"3cx\", \"severity\": \"high\", \"ttl\": 172800, \"published_by\": \"seed\", \"published_at\": 1790357909, \"source\": null}",
+    "ttl_s": 171370
+  },
+  "ioc:ip:91.219.236.44": {
+    "value": "{\"value\": \"91.219.236.44\", \"type\": \"ip\", \"actor\": \"apt28\", \"campaign\": \"dnc-2016\", \"severity\": \"critical\", \"ttl\": 259200, \"published_by\": \"seed\", \"published_at\": 1790357909, \"source\": null}",
+    "ttl_s": 257770
+  },
+  "ioc:hash:aa11bb22cc33dd44ee55ff6677889900": {
+    "value": "{\"value\": \"aa11bb22cc33dd44ee55ff6677889900\", \"type\": \"hash\", \"actor\": \"lazarus\", \"campaign\": \"wannacry\", \"severity\": \"critical\", \"ttl\": 2592000, \"published_by\": \"seed\", \"published_at\": 1790357909, \"source\": null}",
+    "ttl_s": 2590570
+  },
+  "ioc:domain:pay-relay-int.com": {
+    "value": "{\"value\": \"pay-relay-int.com\", \"type\": \"domain\", \"actor\": \"fin7\", \"campaign\": \"carb-pos\", \"severity\": \"high\", \"ttl\": 43200, \"published_by\": \"seed\", \"published_at\": 1790357909, \"source\": null}",
+    "ttl_s": 41770
+  },
+  "ioc:domain:trade-helper-app.com": {
+    "value": "{\"value\": \"trade-helper-app.com\", \"type\": \"domain\", \"actor\": \"lazarus\", \"campaign\": \"3cx\", \"severity\": \"high\", \"ttl\": 432000, \"published_by\": \"seed\", \"published_at\": 1790357909, \"source\": null}",
+    "ttl_s": 430570
+  },
+  "ioc:domain:mail-login-secure.gov-service.net": {
+    "value": "{\"value\": \"mail-login-secure.gov-service.net\", \"type\": \"domain\", \"actor\": \"kimsuky\", \"campaign\": \"dnc-2016\", \"severity\": \"medium\", \"ttl\": 21600, \"published_by\": \"seed\", \"published_at\": 1790357909, \"source\": null}",
+    "ttl_s": 20169
+  },
+  "ioc:domain:iuqerfsodp9ifjaposdfjhgosurijfaewrwergwea.com": {
+    "value": "{\"value\": \"iuqerfsodp9ifjaposdfjhgosurijfaewrwergwea.com\", \"type\": \"domain\", \"actor\": \"lazarus\", \"campaign\": \"wannacry\", \"severity\": \"high\", \"ttl\": 2592000, \"published_by\": \"seed\", \"published_at\": 1790357909, \"source\": null}",
+    "ttl_s": 2590569
+  },
+  "ioc:ip:185.86.77.12": {
+    "value": "{\"value\": \"185.86.77.12\", \"type\": \"ip\", \"actor\": \"apt28\", \"campaign\": \"dnc-2016\", \"severity\": \"high\", \"ttl\": 604800, \"published_by\": \"seed\", \"published_at\": 1790357909, \"source\": null}",
+    "ttl_s": 603369
+  },
+  "ioc:hash:d1f2a9c4e8b7a001deadbeefcafebabe": {
+    "value": "{\"value\": \"d1f2a9c4e8b7a001deadbeefcafebabe\", \"type\": \"hash\", \"actor\": \"sandworm\", \"campaign\": \"notpetya\", \"severity\": \"critical\", \"ttl\": 2592000, \"published_by\": \"seed\", \"published_at\": 1790357909, \"source\": null}",
+    "ttl_s": 2590569
+  },
+  "ioc:ip:13.59.205.66": {
+    "value": "{\"value\": \"13.59.205.66\", \"type\": \"ip\", \"actor\": \"apt29\", \"campaign\": \"solarwinds\", \"severity\": \"high\", \"ttl\": 86400, \"published_by\": \"seed\", \"published_at\": 1790357909, \"source\": null}",
+    "ttl_s": 84969
+  },
+  "ioc:domain:accounts-mail-service.net": {
+    "value": "{\"value\": \"accounts-mail-service.net\", \"type\": \"domain\", \"actor\": \"apt28\", \"campaign\": \"dnc-2016\", \"severity\": \"high\", \"ttl\": 172800, \"published_by\": \"seed\", \"published_at\": 1790357909, \"source\": null}",
+    "ttl_s": 171369
+  }
+}
