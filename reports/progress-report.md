@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **Project title** | GraphRAG-Powered Cyber Threat Intelligence Platform: A Multi-Model NoSQL Approach |
-| **Team members** | Shivansh, Himali, Aayush |
+| **Team members** | Shivansh Sharma (23BCE0254), Himali Sharma (23BCE0317), Aayush Sinha (23BCE0558) |
 | **Institution** | VIT Vellore |
 | **Guide** | Dr. Lydia Jane G |
 | **Repository** | https://github.com/Shivansharmaaaa/graphrag |

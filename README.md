@@ -1,6 +1,6 @@
 # GraphRAG-Powered Cyber Threat Intelligence Platform — a multi-model NoSQL approach
 
-Working implementation of the Review-I design (Shivansh, Himali, Aayush · VIT Vellore · guide Dr. Lydia Jane G).
+Working implementation of the Review-I design (Shivansh Sharma 23BCE0254, Himali Sharma 23BCE0317, Aayush Sinha 23BCE0558 · VIT Vellore · guide Dr. Lydia Jane G).
 
 Four NoSQL engines, each used only for what it does best, plus a GraphRAG layer and an analyst console:
 
