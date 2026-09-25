@@ -1,7 +1,7 @@
 # API Documentation
 
-Auto-generated from the live FastAPI OpenAPI schema (`GraphRAG CTI Platform` v1.0.0).
-Interactive Swagger UI: `GET /docs`. Raw spec: `GET /openapi.json` (also checked in at `docs/openapi.json`).
+Reference for the `GraphRAG CTI Platform` REST API (v1.0.0), FastAPI backend.
+Interactive Swagger UI: `GET /docs`. Raw OpenAPI spec: `GET /openapi.json` (also checked in at `docs/openapi.json`).
 
 ## Authentication
 

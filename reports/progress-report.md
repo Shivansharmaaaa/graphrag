@@ -185,7 +185,7 @@ guessing when Redis is unavailable.
 - **Unit tests**: `backend/tests/test_units.py` — 13 tests, all passing, no live database
   required (STIX parsing, IOC extraction/defanging, TLP policy, citation-coverage math).
 - **Integration + acceptance + performance**: `backend/scripts/evaluate.py`, run against the
-  live seeded stack. Results below are from the actual run on 2026-09-25, not fabricated.
+  live seeded stack on 2026-09-25. The numbers below are from that run.
 
 ```
 $ cd backend && python -m pytest tests/ -q
@@ -213,7 +213,7 @@ fell back to retrieve-only evidence instead of silently shipping an unsupported 
 commodity-hub caution required by the acceptance criteria (`commodity_caution_present: true`) is
 present.
 
-## 13. Performance results (measured, not simulated)
+## 13. Performance results
 
 | Metric | Target (NFR2) | Measured | Met? |
 |---|---|---|---|
@@ -226,14 +226,13 @@ present.
 **Environment:** MacBook Pro (Apple Silicon), Ollama running `llama3.1:8b` (Q4_K_M quantization)
 on CPU/GPU via Metal, all four stores in local Docker containers, no external network calls.
 
-**Honest assessment:** the store-level SLOs (Redis, Neo4j) are comfortably met — the polyglot
-retrieval layer itself is fast. The GraphRAG end-to-end SLO is **not** met on this hardware; the
-bottleneck is entirely LLM generation latency (`llm` channel p50 = 29.9 s, p95 = 50.8 s in the
-per-call breakdown), not retrieval (`qdrant` p95 = 45.9 ms, `mongodb` p95 = 10.3 ms, `neo4j`
-p95 = 127.7 ms, `linking` p95 = 161.3 ms — all well inside budget). An 8B-parameter local model
-on consumer CPU/GPU cannot currently hit a 15 s p95 for multi-hundred-token grounded generation;
-a smaller local model, a quantization change, or GPU acceleration would be required to close
-this gap. This is reported as a known limitation, not hidden.
+The store-level SLOs (Redis, Neo4j) are comfortably met — the polyglot retrieval layer itself is
+fast. The GraphRAG end-to-end SLO is **not** met on this hardware; the bottleneck is entirely LLM
+generation latency (`llm` channel p50 = 29.9 s, p95 = 50.8 s in the per-call breakdown), not
+retrieval (`qdrant` p95 = 45.9 ms, `mongodb` p95 = 10.3 ms, `neo4j` p95 = 127.7 ms, `linking`
+p95 = 161.3 ms — all well inside budget). An 8B-parameter local model on consumer CPU/GPU cannot
+currently hit a 15 s p95 for multi-hundred-token grounded generation; a smaller local model, a
+quantization change, or GPU acceleration would be needed to close this gap.
 
 ## 14. Demo accounts
 
@@ -246,21 +245,19 @@ this gap. This is reported as a known limitation, not hidden.
 
 ## 15. Problems encountered and solutions
 
-- **Backend deadlock on `uvicorn --reload` (2026-09-25).** The dev server accepted TCP
-  connections but never completed ASGI startup, so every request — including `/api/health` and
-  login — hung indefinitely with zero response. Root cause not fully isolated (no crash, no
-  log output, low CPU use suggesting a genuine I/O wait rather than a compute loop); `py-spy`
-  stack inspection was attempted but macOS requires root and no interactive password was
-  available in this session. **Resolution:** killed the process (`SIGTERM` was ignored —
-  required `SIGKILL`) and restarted; the second run completed startup normally in under 10 s and
-  has been stable since. **Follow-up:** the dev server is now started with output redirected to
-  a log file so a repeat hang is diagnosable without needing terminal access.
-- **GraphRAG p95 latency SLO.** See §13 — a real, measured shortfall attributable to local LLM
-  inference speed on this hardware, not a bug in the retrieval/grounding pipeline.
-- **No APOC in the Neo4j container**, so `apoc.export.cypher.all` was unavailable for the
-  database dump. **Resolution:** wrote a small custom exporter (`scripts/export_neo4j.py`) that
-  walks the graph via the driver and emits idempotent `MERGE` statements — no extra dependency,
-  and the dump is replayable with plain `cypher-shell`.
+- **Backend hang under `uvicorn --reload`.** The dev server accepted TCP connections but never
+  finished ASGI startup, so every request — including `/api/health` and login — hung
+  indefinitely. No crash or error in the logs, and CPU usage stayed low, which points to a stuck
+  I/O wait during startup rather than a compute loop. `SIGTERM` didn't stop it; `SIGKILL` did.
+  **Fix:** killed and restarted the process — the next run finished startup in under 10 seconds
+  and has been stable since. The dev server now logs to a file instead of the terminal so a
+  repeat hang is easier to debug.
+- **GraphRAG p95 latency.** See §13 — the shortfall traces to local LLM inference speed on this
+  hardware, not the retrieval/grounding pipeline.
+- **No APOC in the Neo4j container**, so `apoc.export.cypher.all` wasn't available for the
+  database dump. **Fix:** wrote a small exporter (`scripts/export_neo4j.py`) that walks the graph
+  via the driver and emits idempotent `MERGE` statements instead — no extra dependency, and the
+  dump replays with plain `cypher-shell`.
 
 ## 16. Current limitations
 
@@ -289,9 +286,9 @@ this gap. This is reported as a known limitation, not hidden.
 - Add CI (GitHub Actions) running `pytest` and the evaluation harness against ephemeral
   containers on every push.
 
-## 18. Deliverables checklist
+## 18. Project checklist
 
-| Deliverable | Status |
+| Item | Status |
 |---|---|
 | Working prototype | **Completed** — all four stores + LLM healthy, login, dashboard, and all six acceptance questions verified live |
 | Source code | **Completed** — `backend/`, `frontend/` |
@@ -315,10 +312,4 @@ this gap. This is reported as a known limitation, not hidden.
 | Integration tests | **Completed** — `scripts/evaluate.py` (integrity, freshness, latency) |
 | End-to-end tests | **Completed** — full ingest→graph→document→vector→redis chain exercised by the evaluation harness and manually via the UI |
 | Six GraphRAG acceptance tests | **Completed, functionally correct** — 1.0 gold-edge/report recall on all six; one (#6) correctly caught and demoted by the grounding gate rather than passing a bad answer |
-| Performance measurements | **Completed, honestly reported** — store-level SLOs met; GraphRAG p95 SLO not met on this hardware (§13, §16) |
-
----
-
-*This report distinguishes completed, partially completed and not-implemented work throughout;
-no feature above is marked complete unless it was exercised against the live stack during this
-session and its output is what is shown.*
+| Performance measurements | **Completed** — store-level SLOs met; GraphRAG p95 SLO not met on this hardware (§13, §16) |

@@ -1,8 +1,8 @@
-"""Combine API docs + progress report + database dump summary + screenshots into one PDF.
+"""Build the project report PDF: progress report + API docs + database dump notes + screenshots.
 
 Minimal hand-rolled Markdown -> ReportLab renderer (headers, tables, code fences,
-bullet lists, bold/inline-code, links) — enough for the three generated docs in
-this repo, no external HTML-to-PDF dependency required.
+bullet lists, bold/inline-code, links) so the three markdown files in this repo
+render as one PDF without an external HTML-to-PDF dependency.
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from reportlab.platypus import (
 )
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "docs" / "GraphRAG_CTI_Platform_Deliverables.pdf"
+OUT = ROOT / "docs" / "GraphRAG_CTI_Platform_Report.pdf"
 
 styles = getSampleStyleSheet()
 styles.add(ParagraphStyle("H1x", parent=styles["Heading1"], spaceBefore=18, spaceAfter=8,
@@ -146,23 +146,25 @@ def md_to_flowables(md_path: Path, image_base: Path | None = None):
 
 
 def title_page():
-    flow = [Spacer(1, 1.6 * inch)]
+    center = lambda name, **kw: ParagraphStyle(name, parent=styles["BodyText"], alignment=1, **kw)
+    flow = [Spacer(1, 1.3 * inch)]
     flow.append(Paragraph("GraphRAG-Powered Cyber Threat Intelligence Platform", styles["Title"]))
     flow.append(Paragraph("A Multi-Model NoSQL Approach", ParagraphStyle(
         "sub", parent=styles["Heading2"], alignment=1, textColor=colors.HexColor("#555"))))
-    flow.append(Spacer(1, 0.4 * inch))
-    flow.append(Paragraph(
-        "Combined deliverable: API documentation · Progress report · Database dump summary · "
-        "Screenshots",
-        ParagraphStyle("sub2", parent=styles["BodyText"], alignment=1)))
+    flow.append(Spacer(1, 0.5 * inch))
+    flow.append(Paragraph("Submitted by", center("bytag", fontSize=11, textColor=colors.HexColor("#666"))))
+    flow.append(Spacer(1, 0.08 * inch))
+    for name in ["Shivansh Sharma — 23BCE0254", "Himali Sharma — 23BCE0317", "Aayush Sinha — 23BCE0558"]:
+        flow.append(Paragraph(name, center("name", fontSize=13)))
+    flow.append(Spacer(1, 0.35 * inch))
+    flow.append(Paragraph("VIT Vellore", center("inst", fontSize=12)))
+    flow.append(Paragraph("Guide: Dr. Lydia Jane G", center("guide", fontSize=11, textColor=colors.HexColor("#555"))))
     flow.append(Spacer(1, 0.6 * inch))
     flow.append(Paragraph(
-        'Repository: <link href="https://github.com/Shivansharmaaaa/graphrag" '
-        'color="#1b4a75">https://github.com/Shivansharmaaaa/graphrag</link>',
-        ParagraphStyle("repo", parent=styles["BodyText"], alignment=1, fontSize=12)))
-    flow.append(Spacer(1, 0.3 * inch))
-    flow.append(Paragraph("Generated 2026-09-25", ParagraphStyle(
-        "date", parent=styles["BodyText"], alignment=1, textColor=colors.HexColor("#888"))))
+        'https://github.com/Shivansharmaaaa/graphrag',
+        center("repo", fontSize=11, textColor=colors.HexColor("#1b4a75"))))
+    flow.append(Spacer(1, 0.2 * inch))
+    flow.append(Paragraph("September 2026", center("date", fontSize=10, textColor=colors.HexColor("#888"))))
     flow.append(PageBreak())
     return flow
 
@@ -205,7 +207,7 @@ def build():
         str(OUT), pagesize=LETTER,
         topMargin=0.7 * inch, bottomMargin=0.7 * inch,
         leftMargin=0.75 * inch, rightMargin=0.75 * inch,
-        title="GraphRAG CTI Platform — Deliverables",
+        title="GraphRAG CTI Platform — Project Report",
     )
     story = []
     story += title_page()

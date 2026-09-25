@@ -27,7 +27,7 @@ def _props(d: dict) -> str:
 def export(out_path: Path) -> None:
     stores.connect()
     lines = [
-        "// Auto-generated Neo4j graph dump — rebuild with:",
+        "// Neo4j graph dump — rebuild with:",
         "//   cypher-shell -u neo4j -p <password> < graph_dump.cypher",
         "",
     ]
