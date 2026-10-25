@@ -26,7 +26,7 @@ class Settings(BaseSettings):
 
     # --- locally hosted LLM (NFR1: no mandatory cloud API) -----------------
     ollama_url: str = "http://localhost:11434"
-    ollama_model: str = "llama3.1"
+    ollama_model: str = "llama3.2:3b"  # 3B meets the 15 s GraphRAG p95 SLO on a laptop (README §6)
     llm_timeout_s: float = 60.0
 
     # --- embeddings: "tfidf" (offline, default) or "ollama" (nomic-embed-text)
@@ -48,6 +48,15 @@ class Settings(BaseSettings):
     max_neighbours_per_node: int = 12
     vector_top_k: int = 6
     min_citation_coverage: float = 0.5
+
+    # --- LLM prompt budget (NFR2): prompt evaluation dominates local-LLM latency, so the model
+    # sees a trimmed evidence pack; the UI and the audit log still get the full evidence.
+    llm_max_facts: int = 30
+    llm_max_docs: int = 6
+    llm_doc_chars: int = 300
+    llm_max_iocs: int = 12
+    llm_num_predict: int = 320         # output-token cap (the answer is 3-8 sentences)
+    llm_keep_alive: str = "30m"        # keep the model resident between questions
 
     auto_seed: bool = True
 

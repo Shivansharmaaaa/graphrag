@@ -183,20 +183,25 @@ def _fmt_ttl(s: int | None) -> str:
 
 
 def render_prompt(question: str, ctx: dict, docs: list[dict]) -> str:
+    """Evidence pack for the LLM, trimmed to the prompt budget. Facts and documents arrive
+    ranked, so the budget keeps the most relevant ones; MENTIONED_IN edges are left out because
+    each document line already lists its actors. Citation ids keep their full-pack numbering."""
+    facts = [f for f in ctx["facts"] if f["type"] != "MENTIONED_IN"][: settings.llm_max_facts]
     lines = ["GRAPH FACTS (Neo4j):"]
-    lines += [f"[{f['cid']}] {f['text']}" for f in ctx["facts"]] or ["(none)"]
+    lines += [f"[{f['cid']}] {f['text']}" for f in facts] or ["(none)"]
     lines.append("\nREPORT PASSAGES (Qdrant):")
     lines += [f"[{c['cid']}] (report {c['report_id']}, \"{c['title']}\", score {c['score']}) {c['text']}"
               for c in ctx["chunks"]] or ["(none)"]
     lines.append("\nSOURCE DOCUMENTS (MongoDB):")
-    for d in docs:
+    for d in docs[: settings.llm_max_docs]:
         extra = {k: d[k] for k in documents.variable_fields(d)}
         lines.append(f"[R:{d['_id']}] \"{d.get('title')}\" ({d.get('date')}, TLP:{d.get('tlp')}) "
-                     f"actors={d.get('actors', [])} {extra if extra else ''}\n    {d.get('body', '')[:700]}")
+                     f"actors={d.get('actors', [])} {extra if extra else ''}\n"
+                     f"    {d.get('body', '')[: settings.llm_doc_chars]}")
     if not docs:
         lines.append("(none)")
     lines.append("\nLIVE IOC STATE (Redis):")
-    lines += [f"[{x['cid']}] {_ioc_line(x)}" for x in ctx["iocs"]] or ["(none)"]
+    lines += [f"[{x['cid']}] {_ioc_line(x)}" for x in ctx["iocs"][: settings.llm_max_iocs]] or ["(none)"]
     if ctx["hub_notes"]:
         lines.append("\nCAUTIONS:")
         lines += [f"- {h}" for h in ctx["hub_notes"]]
@@ -224,7 +229,9 @@ def call_llm(prompt: str, t: dict) -> str:
         r = httpx.post(
             f"{settings.ollama_url}/api/chat",
             json={"model": settings.ollama_model, "stream": False,
-                  "options": {"temperature": 0.1, "num_ctx": 8192},
+                  "keep_alive": settings.llm_keep_alive,
+                  "options": {"temperature": 0.1, "num_ctx": 8192,
+                              "num_predict": settings.llm_num_predict},
                   "messages": [{"role": "system", "content": SYSTEM_PROMPT},
                                {"role": "user", "content": prompt}]},
             timeout=settings.llm_timeout_s,
@@ -285,10 +292,23 @@ def extractive_answer(r: dict, ctx: dict) -> str:
 
 # ================================================================== groundedness gate
 _MULTI_TAG = re.compile(r"\[((?:[GCI]\d+|R:[\w.\-]+)(?:\s*[,;]\s*(?:[GCI]\d+|R:[\w.\-]+))+)\]")
+_RANGE_TAG = re.compile(r"\[([GCI])(\d+)\s*[-–]\s*\1?(\d+)\]")
+# "(C2)" in CTI prose almost always means command-and-control, so chunk tags stay bracket-only
+_PAREN_TAG = re.compile(r"\(((?:[GI]\d+|R:[\w.\-]+)(?:\s*[,;]\s*(?:[GI]\d+|R:[\w.\-]+))*)\)")
+_BARE_RPT = re.compile(r"\[(rpt-[\w.\-]+)\]")
+
+
+def _expand_range(m: re.Match) -> str:
+    lo, hi = int(m.group(2)), int(m.group(3))
+    return " ".join(f"[{m.group(1)}{i}]" for i in range(lo, min(hi, lo + 20) + 1))
 
 
 def normalise_tags(text: str) -> str:
-    """LLMs often write [G1, G2] or [R:rpt-001; C3] — expand to one tag per bracket."""
+    """LLMs often write [G1, G2], [R:rpt-001; C3], [G1-G4], (G20) or [rpt-001] — rewrite each
+    to one canonical tag per bracket. Validity is still checked against the context pack."""
+    text = _RANGE_TAG.sub(_expand_range, text)
+    text = _PAREN_TAG.sub(lambda m: f"[{m.group(1)}]", text)
+    text = _BARE_RPT.sub(r"[R:\1]", text)
     return _MULTI_TAG.sub(lambda m: " ".join(f"[{t.strip()}]" for t in re.split(r"[,;]", m.group(1))), text)
 
 
@@ -311,8 +331,13 @@ def enforce_grounding(answer: str, ctx: dict, docs: list[dict]) -> dict:
     if answer.strip().startswith(REFUSAL[:30]):
         return {"answer": REFUSAL, "kept": [], "dropped": [], "coverage": 0.0, "refused": True,
                 "citations": []}
+
+    def fix_report_tag(m: re.Match) -> str:  # [R:4da6727af1] -> [R:rpt-4da6727af1] when that exists
+        return f"[R:rpt-{m.group(1)}]" if f"R:rpt-{m.group(1)}" in valid else m.group(0)
+
     kept, dropped, cites = [], [], []
     for s in split_sentences(answer):
+        s = re.sub(r"\[R:(?!rpt-)([\w.\-]+)\]", fix_report_tag, s)
         tags = [t for t in TAG_RE.findall(s) if t in valid]
         if tags:
             s = TAG_RE.sub(lambda m: m.group(0) if m.group(1) in valid else "", s)

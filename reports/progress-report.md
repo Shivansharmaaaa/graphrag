@@ -9,7 +9,7 @@
 | **Institution** | VIT Vellore |
 | **Guide** | Dr. Lydia Jane G |
 | **Repository** | https://github.com/Shivansharmaaaa/graphrag |
-| **Report date** | 2026-09-25 |
+| **Report date** | 2026-09-25 (results updated 2026-10-25) |
 
 ---
 
@@ -75,7 +75,7 @@ database, no shortcuts between stores. The full requirement-to-code traceability
 | Key-value store | Redis 7 |
 | Vector store | Qdrant |
 | Embeddings | TF-IDF + truncated SVD (default, offline, 64-d) or Ollama `nomic-embed-text` |
-| LLM | Ollama, `llama3.1:8b` (local, no cloud API) |
+| LLM | Ollama, `llama3.2:3b` by default (local, no cloud API); `llama3.1:8b` optional |
 | Frontend | React + Vite, plain CSS, Cytoscape-style custom `GraphCanvas` component |
 | Deployment | Docker Compose (`neo4j`, `mongo`, `redis`, `qdrant`, optional `app`/`llm` profiles) |
 | Testing | pytest (unit), `scripts/evaluate.py` (integration + acceptance + performance) |
@@ -182,57 +182,86 @@ guessing when Redis is unavailable.
 
 ## 11. Testing
 
-- **Unit tests**: `backend/tests/test_units.py` — 13 tests, all passing, no live database
-  required (STIX parsing, IOC extraction/defanging, TLP policy, citation-coverage math).
-- **Integration + acceptance + performance**: `backend/scripts/evaluate.py`, run against the
-  live seeded stack on 2026-09-25. The numbers below are from that run.
+- **Unit tests**: `backend/tests/test_units.py` — 15 tests, all passing, no live database
+  required (STIX parsing, IOC extraction/defanging, TLP policy, citation-coverage math, the
+  citation forms the groundedness gate accepts).
+- **Integration tests**: `backend/tests/test_api.py` — 15 tests that drive the real API against
+  the four live stores: auth and roles, TLP on lists / search / GraphRAG context, publish →
+  enforce → revoke, fail-closed enforcement when Redis is down, retrieve-only fallback when the
+  LLM is down, audit replay, ingest fan-out, delete cascade and integrity. Each test removes what
+  it writes, so the suite runs safely against the seeded demo stack.
+- **Acceptance + performance**: `backend/scripts/evaluate.py`, run against the live seeded stack
+  on 2026-10-25. The numbers below are from that run. `--check` exits non-zero when a
+  correctness gate fails (gold recall, refusals, commodity caution, expiry, integrity).
+- **CI**: `.github/workflows/ci.yml` runs all three tiers on every push against fresh Neo4j,
+  MongoDB, Redis and Qdrant service containers (GraphRAG in retrieve-only mode, since CI has no
+  LLM), plus the frontend build.
 
 ```
-$ cd backend && python -m pytest tests/ -q
-13 passed in 1.36s
+$ make test
+15 passed, 15 deselected in 1.43s
+$ make test-integration
+15 passed, 15 deselected in 1.77s
+$ make eval-check
+all correctness gates passed
 ```
 
 ## 12. Acceptance test results (the six Appendix-A questions)
 
-All six run against the live GraphRAG pipeline. Gold-edge and gold-report recall is **1.0**
-(every required graph fact and source report was retrieved) across all six; mean citation
-coverage **0.863**.
+All six run against the live GraphRAG pipeline with the default `llama3.2:3b` model. Gold-edge
+and gold-report recall is **1.0** (every required graph fact and source report was retrieved)
+across all six; mean citation coverage **0.822**.
 
 | # | Question | Mode | Edge recall | Report recall | Citation coverage | Latency |
 |---|---|---|---|---|---|---|
-| 1 | Shared C2 infrastructure + hosted malware | llm | 2/2 | 1/1 | 0.833 | 43.9 s |
-| 2 | APT29 ↔ supply-chain ↔ SUNBURST | llm | 1/1 | 1/1 | 0.714 | 30.3 s |
-| 3 | Cobalt Strike users besides FIN7 + shared domains | llm | 2/2 | 1/1 | 0.833 | 29.4 s |
-| 4 | Sandworm destructive campaigns + APT28 infra overlap | llm | 2/2 | 1/1 | 0.800 | 26.3 s |
-| 5 | Spearphishing-against-government analogue search | llm | 0/0 | 1/1 | 1.000 | 36.4 s |
-| 6 | Why Mimikatz is a weak attribution signal | **retrieve-only** (LLM answer failed grounding, gate caught it) | 2/2 | 1/1 | 1.000 | 52.3 s |
+| 1 | Shared C2 infrastructure + hosted malware | llm | 2/2 | 1/1 | 0.667 | 9.9 s |
+| 2 | APT29 ↔ supply-chain ↔ SUNBURST | **retrieve-only** (LLM answer failed grounding, gate caught it) | 1/1 | 1/1 | 1.000 | 9.1 s |
+| 3 | Cobalt Strike users besides FIN7 + shared domains | llm | 2/2 | 1/1 | 1.000 | 7.1 s |
+| 4 | Sandworm destructive campaigns + APT28 infra overlap | llm | 2/2 | 1/1 | 1.000 | 6.4 s |
+| 5 | Spearphishing-against-government analogue search | llm | 0/0 | 1/1 | 0.667 | 9.0 s |
+| 6 | Why Mimikatz is a weak attribution signal | llm | 2/2 | 1/1 | 0.600 | 9.7 s |
 
-Test 6 is the clearest evidence the anti-hallucination gate works as designed: the LLM's first
+Test 2 is the clearest evidence the anti-hallucination gate works as designed: the LLM's first
 answer did not meet the citation-coverage threshold, so the pipeline **refused to return it** and
 fell back to retrieve-only evidence instead of silently shipping an unsupported claim. The
-commodity-hub caution required by the acceptance criteria (`commodity_caution_present: true`) is
-present.
+commodity-hub caution required by test 6 (`commodity_caution_present: true`) is present.
+
+The first acceptance run (2026-09-25, `llama3.1:8b`, untrimmed prompt) also reached 1.0 gold
+recall, with mean coverage 0.863 and latencies of 26–52 s per question; §13 explains the change.
 
 ## 13. Performance results
 
 | Metric | Target (NFR2) | Measured | Met? |
 |---|---|---|---|
-| Redis GET p99 | < 5 ms | **1.43 ms** (harness probe) / 4.75 ms (515-call process sample) | ✅ |
-| Neo4j 1-hop p95 | < 500 ms | **9.08 ms** | ✅ |
-| Neo4j 2-hop p95 | < 500 ms | **40.42 ms** | ✅ |
-| Neo4j 3-hop p95 | < 500 ms | **15.75 ms** | ✅ |
-| GraphRAG end-to-end p95 | < 15 s | **52.3 s** | ❌ |
+| Redis GET p99 | < 5 ms | **1.43 ms** (harness probe) / 1.86 ms (515-call process sample) | ✅ |
+| Neo4j 1-hop p95 | < 500 ms | **4.75 ms** | ✅ |
+| Neo4j 2-hop p95 | < 500 ms | **6.42 ms** | ✅ |
+| Neo4j 3-hop p95 | < 500 ms | **13.95 ms** | ✅ |
+| GraphRAG end-to-end p95 | < 15 s | **9.9 s** | ✅ |
 
-**Environment:** MacBook Pro (Apple Silicon), Ollama running `llama3.1:8b` (Q4_K_M quantization)
-on CPU/GPU via Metal, all four stores in local Docker containers, no external network calls.
+**Environment:** MacBook Pro (Apple Silicon), Ollama running `llama3.2:3b` on GPU via Metal, all
+four stores in local Docker containers, no external network calls.
 
-The store-level SLOs (Redis, Neo4j) are comfortably met — the polyglot retrieval layer itself is
-fast. The GraphRAG end-to-end SLO is **not** met on this hardware; the bottleneck is entirely LLM
-generation latency (`llm` channel p50 = 29.9 s, p95 = 50.8 s in the per-call breakdown), not
-retrieval (`qdrant` p95 = 45.9 ms, `mongodb` p95 = 10.3 ms, `neo4j` p95 = 127.7 ms, `linking`
-p95 = 161.3 ms — all well inside budget). An 8B-parameter local model on consumer CPU/GPU cannot
-currently hit a 15 s p95 for multi-hundred-token grounded generation; a smaller local model, a
-quantization change, or GPU acceleration would be needed to close this gap.
+All SLOs are met. Retrieval is a small fraction of the budget (`qdrant` p95 = 14.4 ms,
+`mongodb` p95 = 3.7 ms, `neo4j` p95 = 23.0 ms, `linking` p95 = 13.9 ms); the `llm` channel is
+almost all of it (p50 = 9.0 s, p95 = 9.9 s).
+
+The first measurement (2026-09-25) missed this SLO at **52.3 s**. Profiling one call showed that
+most of the time went to evaluating the prompt, not generating the answer: the context pack was
+about 5,000 tokens (60 graph facts plus 10 documents at 700 characters each), which took 17 s
+of a 24 s `llama3.1` call before the first output token. Two changes closed the gap:
+
+| Change | GraphRAG p95 |
+|---|---|
+| Baseline: `llama3.1:8b`, full evidence pack in the prompt | 37.5–52.3 s |
+| Prompt budget (top 30 non-`MENTIONED_IN` facts, 6 documents × 300 chars, 12 IOC states), 320-token output cap, model kept loaded | 21–27 s |
+| Default model `llama3.2:3b` | **9.9–12.4 s** |
+
+The UI and the audit log still receive the full evidence; only the LLM's view is trimmed, and
+citation ids keep their full-pack numbering, so the groundedness gate is unchanged. The budget is
+configurable (`LLM_MAX_FACTS`, `LLM_MAX_DOCS`, `LLM_DOC_CHARS`, `LLM_MAX_IOCS`,
+`LLM_NUM_PREDICT`, `LLM_KEEP_ALIVE`). `OLLAMA_MODEL=llama3.1` remains available for fuller
+answers on faster hardware.
 
 ## 14. Demo accounts
 
@@ -252,8 +281,16 @@ quantization change, or GPU acceleration would be needed to close this gap.
   **Fix:** killed and restarted the process — the next run finished startup in under 10 seconds
   and has been stable since. The dev server now logs to a file instead of the terminal so a
   repeat hang is easier to debug.
-- **GraphRAG p95 latency.** See §13 — the shortfall traces to local LLM inference speed on this
-  hardware, not the retrieval/grounding pipeline.
+- **GraphRAG p95 latency.** The first run measured 52.3 s against a 15 s target. Profiling
+  traced it to prompt evaluation of a ~5,000-token context pack, not to retrieval. **Fix:** a
+  prompt-side evidence budget, an output-token cap, a keep-alive, and `llama3.2:3b` as the
+  default model (§13), now 9.9 s p95.
+- **Grounding gate dropped correctly cited sentences.** Local models often write citations as
+  `[G1-G4]`, `(G20)` or `[rpt-001]`, which the gate did not recognise, so it deleted sentences
+  that did cite real evidence (in one answer, the sentence naming Sandworm's campaigns).
+  **Fix:** the gate normalises these forms before checking each tag against the context pack.
+  `(C2)` is deliberately excluded, since in CTI prose it means command-and-control. Unit tests
+  cover both cases.
 - **No APOC in the Neo4j container**, so `apoc.export.cypher.all` wasn't available for the
   database dump. **Fix:** wrote a small exporter (`scripts/export_neo4j.py`) that walks the graph
   via the driver and emits idempotent `MERGE` statements instead — no extra dependency, and the
@@ -261,7 +298,9 @@ quantization change, or GPU acceleration would be needed to close this gap.
 
 ## 16. Current limitations
 
-- GraphRAG end-to-end p95 (52.3 s) exceeds the 15 s target on this hardware (§13).
+- The default `llama3.2:3b` gives terser answers than `llama3.1:8b`, and in the latest run one
+  of six answers fell back to retrieve-only through the grounding gate. `llama3.1` gives fuller
+  answers but misses the 15 s target on this hardware (21–27 s p95).
 - Embeddings default to TF-IDF+SVD (64-d, offline, deterministic) rather than a neural
   sentence-transformer; `EMBEDDER=ollama` with `nomic-embed-text` is supported but not the
   default, and was not what the acceptance run above used.
@@ -277,14 +316,13 @@ quantization change, or GPU acceleration would be needed to close this gap.
 
 ## 17. Future improvements
 
-- Swap in a quantized smaller local model, or add optional GPU-accelerated inference, to close
-  the GraphRAG latency gap.
+- Stream the LLM answer to the console (with the grounding gate applied on completion) so the
+  first sentences appear sooner, and evaluate GPU-accelerated inference to run `llama3.1:8b`
+  within the SLO.
 - Add a neural embedding backend as the default once model size / first-run download time is
   acceptable for the target grading environment.
 - Expand the seed corpus with more STIX-derived reports to stress-test hub-node budgets
   (`MAX_NEIGHBOURS_PER_NODE`, `HUB_DEGREE_THRESHOLD`) at larger scale.
-- Add CI (GitHub Actions) running `pytest` and the evaluation harness against ephemeral
-  containers on every push.
 
 ## 18. Project checklist
 
@@ -308,8 +346,9 @@ quantization change, or GPU acceleration would be needed to close this gap.
 | Security documentation | **Completed** — this report §10, `README.md` design notes |
 | Testing documentation | **Completed** — this report §11–13 |
 | Progress report | **Completed** — this file |
-| Unit tests | **Completed** — 13/13 passing |
-| Integration tests | **Completed** — `scripts/evaluate.py` (integrity, freshness, latency) |
+| Unit tests | **Completed** — 15/15 passing |
+| Integration tests | **Completed** — `tests/test_api.py` (15/15 passing against live stores) and `scripts/evaluate.py` (integrity, freshness, latency) |
+| Continuous integration | **Completed** — `.github/workflows/ci.yml` (unit + integration + evaluation gates + frontend build) |
 | End-to-end tests | **Completed** — full ingest→graph→document→vector→redis chain exercised by the evaluation harness and manually via the UI |
-| Six GraphRAG acceptance tests | **Completed, functionally correct** — 1.0 gold-edge/report recall on all six; one (#6) correctly caught and demoted by the grounding gate rather than passing a bad answer |
-| Performance measurements | **Completed** — store-level SLOs met; GraphRAG p95 SLO not met on this hardware (§13, §16) |
+| Six GraphRAG acceptance tests | **Completed, functionally correct** — 1.0 gold-edge/report recall on all six; one (#2) correctly caught and demoted by the grounding gate rather than passing a bad answer |
+| Performance measurements | **Completed** — all SLOs met, including GraphRAG p95 9.9 s against 15 s (§13) |

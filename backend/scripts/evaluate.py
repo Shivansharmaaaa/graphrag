@@ -2,12 +2,15 @@
 GraphRAG groundedness (citation coverage, NFR4), blocklist freshness and ingest consistency.
 
 Run against a live, seeded stack:  cd backend && python -m scripts.evaluate
-Writes eval_report.json next to where it is run.
+Writes eval_report.json next to where it is run. ``--check`` exits non-zero when a correctness
+gate fails (gold recall, refusals, commodity caution, freshness, integrity); latency SLOs are
+reported but not gated, since they depend on the host and the local LLM.
 """
 from __future__ import annotations
 
 import json
 import statistics
+import sys
 import time
 
 from app import blocklist, graph, graphrag, integrity, metrics, stores
@@ -107,8 +110,27 @@ def main() -> dict:
     return report
 
 
+def failed_gates(r: dict) -> list[str]:
+    g = r["graphrag"]
+    fails = [f"gold edge recall {g['gold_edge_recall']} < 1.0"] if g["gold_edge_recall"] < 1 else []
+    if g["gold_report_recall"] < 1:
+        fails.append(f"gold report recall {g['gold_report_recall']} < 1.0")
+    fails += [f"refused: {q['question']}" for q in g["questions"] if q["refused"]]
+    fails += [f"no commodity caution: {q['question']}" for q in g["questions"]
+              if q.get("commodity_caution_present") is False]
+    if not r["blocklist_freshness"]["ok"]:
+        fails.append("blocklist expiry probe failed")
+    if not r["integrity"]["ok"]:  # informational rules do not affect integrity's own verdict
+        fails.append("integrity: " + "; ".join(x["rule"] for x in r["integrity"]["rules"] if not x["ok"]))
+    return fails
+
+
 if __name__ == "__main__":
     r = main()
     with open("eval_report.json", "w") as f:
         json.dump(r, f, indent=2, default=str)
     print(json.dumps({k: v for k, v in r.items() if k not in ("process_latency_summary",)}, indent=2, default=str))
+    if "--check" in sys.argv[1:]:
+        fails = failed_gates(r)
+        print("\n".join(["", "FAILED GATES:", *fails] if fails else ["", "all correctness gates passed"]))
+        sys.exit(1 if fails else 0)

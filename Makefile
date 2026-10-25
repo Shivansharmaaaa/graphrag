@@ -1,5 +1,5 @@
 # GraphRAG CTI Platform — local helpers
-.PHONY: infra down install api web seed eval test llm app
+.PHONY: infra down install api web seed eval eval-check test test-integration llm app
 
 infra:            ## start Neo4j, MongoDB, Redis, Qdrant
 	docker compose up -d
@@ -22,13 +22,19 @@ seed:             ## (re)load the initial corpus into all four stores
 	cd backend && ../.venv/bin/python -m app.seed
 
 llm:              ## pull the local model (Ollama must be running)
-	ollama pull llama3.1
+	ollama pull llama3.2:3b
 
 eval:             ## Review-III style evaluation: gold paths, SLOs, citation coverage
 	cd backend && ../.venv/bin/python -m scripts.evaluate
 
+eval-check:       ## same, but exit non-zero if a correctness gate fails (used by CI)
+	cd backend && ../.venv/bin/python -m scripts.evaluate --check
+
 test:             ## unit tests (no databases needed)
-	cd backend && ../.venv/bin/python -m pytest -q tests
+	cd backend && ../.venv/bin/python -m pytest -q
+
+test-integration: ## API tests against the live stores (make infra first); cleans up after itself
+	cd backend && ../.venv/bin/python -m pytest -q -m integration
 
 app:              ## everything in containers
 	docker compose --profile app up -d --build

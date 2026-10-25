@@ -19,7 +19,8 @@ Four NoSQL engines, each used only for what it does best, plus a GraphRAG layer 
 ```
 nosql/
 ├── docker-compose.yml          # neo4j, mongo, redis, qdrant (+ profiles: app, llm)
-├── Makefile                    # make infra | install | api | web | seed | eval | test
+├── Makefile                    # make infra | install | api | web | seed | eval | test | test-integration
+├── .github/workflows/ci.yml    # CI: unit + integration tests + eval gates against ephemeral stores
 ├── .env.example                # copy to .env
 ├── samples/
 │   └── stix_apt28_bundle.json  # STIX 2.1 bundle for the ingest demo
@@ -44,7 +45,10 @@ nosql/
 │   │   ├── seed.py             # initial corpus loader (FR8)
 │   │   └── data.py             # public-knowledge corpus: actors, campaigns, malware, reports, IOCs
 │   ├── scripts/evaluate.py     # gold paths, latency SLOs, citation coverage, freshness, integrity
-│   └── tests/test_units.py     # unit tests (no DB needed)
+│   ├── pytest.ini              # `integration` marker (deselected by default)
+│   └── tests/
+│       ├── test_units.py       # unit tests (no DB needed)
+│       └── test_api.py         # integration tests: the real API against the live stores
 └── frontend/                   # React + Vite analyst console
     ├── package.json, vite.config.js, index.html, Dockerfile, nginx.conf
     └── src/
@@ -82,12 +86,22 @@ npm run dev                     # http://localhost:5173
 
 # 4) optional: local LLM for fluent answers (without it the platform runs in retrieve-only mode)
 #    install from https://ollama.com, then:
-ollama pull llama3.1
+ollama pull llama3.2:3b          # default; meets the 15 s GraphRAG SLO (see §6 for llama3.1)
 ```
 
-If `make` is installed you can use the shortcuts instead: `make infra`, `make install`, `make api`, `make web`, `make seed`, `make test`, `make eval`.
+If `make` is installed you can use the shortcuts instead: `make infra`, `make install`, `make api`, `make web`, `make seed`, `make test`, `make test-integration`, `make eval`.
 
-**Everything in containers:** `docker compose --profile app up -d --build` → console at http://localhost:5173 (add `--profile llm` for an Ollama container, then run `docker exec cti-ollama ollama pull llama3.1` and set `OLLAMA_URL_DOCKER=http://ollama:11434` in `.env`).
+### Tests
+
+| Command | Needs | What it checks |
+|---|---|---|
+| `make test` | nothing | 15 unit tests: TLP policy, hashing, IOC extraction and refanging, entity linking, STIX mapping, chunking, the groundedness gate |
+| `make test-integration` | `make infra` | 15 API tests against the live stores: auth and roles, TLP on lists, search and GraphRAG context, publish → enforce → revoke, fail-closed enforcement, LLM-down fallback, audit replay, ingest fan-out, delete cascade and integrity. Everything a test writes is removed afterwards |
+| `make eval` / `make eval-check` | `make infra` (+ Ollama for `llm` mode) | the six Appendix-A questions (gold edges and reports), latency SLOs, expiry probe, integrity. `eval-check` exits non-zero when a correctness gate fails |
+
+CI (`.github/workflows/ci.yml`) runs all three on every push against fresh Neo4j, MongoDB, Redis and Qdrant service containers, plus the frontend build. CI has no LLM, so GraphRAG is checked in retrieve-only mode.
+
+**Everything in containers:** `docker compose --profile app up -d --build` → console at http://localhost:5173 (add `--profile llm` for an Ollama container, then run `docker exec cti-ollama ollama pull llama3.2:3b` and set `OLLAMA_URL_DOCKER=http://ollama:11434` in `.env`).
 
 ### Demo accounts
 
@@ -139,7 +153,7 @@ curl -H "X-API-Key: edr-consumer-key" "http://localhost:8000/api/enforce/export?
 | **FR11** AuthN + TLP | `security.py` (JWT, roles, clearance). TLP is enforced on list, get, search, GraphRAG context and answer label, and on audit visibility |
 | **FR12** Publish / revoke IOC | `POST/DELETE /api/blocklist` (lead role). The graph is never rewritten |
 | **NFR1** Data residency | Local Ollama LLM, local embeddings (TF-IDF+SVD or Ollama), no cloud calls |
-| **NFR2** Latency | Measured per store (`metrics.py`) and checked in `scripts/evaluate.py` |
+| **NFR2** Latency | Measured per store (`metrics.py`) and checked in `scripts/evaluate.py`. The LLM sees a trimmed evidence pack (`LLM_MAX_*` settings) because prompt evaluation dominates local-LLM latency |
 | **NFR3** Store isolation | The enforcement path reads only Redis. A miss never falls back to MongoDB |
 | **NFR4** Groundedness | `enforce_grounding`: uncited sentences are removed, and the answer is refused below `MIN_CITATION_COVERAGE` |
 | **NFR5** Reproducibility | Pinned deps, docker-compose, versioned schema (`ensure_schema`, `meta.schema`), deterministic seed |
@@ -171,3 +185,12 @@ curl -H "X-API-Key: edr-consumer-key" "http://localhost:8000/api/enforce/export?
 * **Indicator nodes:** network IOCs are linked `Infrastructure -[:OBSERVED_AS]-> Indicator` by value, and file hashes `Malware -[:HAS_IOC]-> Indicator`.
 * **Users, audit log and ingest log** live in MongoDB. There is no fifth catch-all database.
 * If the Qdrant container is not running, the API falls back to Qdrant's embedded local mode so the rest of the platform still works.
+* **LLM prompt budget and model choice:** on a laptop, GraphRAG latency is almost all LLM time, and most of that is evaluating the prompt. The full evidence (up to 60 edges, 10 documents) still goes to the UI and the audit log, but the LLM sees a trimmed pack: the top 30 non-`MENTIONED_IN` facts, 6 documents with 300-character excerpts, and 12 IOC states. Output is capped at 320 tokens, and the model is kept loaded for 30 minutes (`LLM_MAX_FACTS`, `LLM_MAX_DOCS`, `LLM_DOC_CHARS`, `LLM_MAX_IOCS`, `LLM_NUM_PREDICT`, `LLM_KEEP_ALIVE`). Citation ids keep their full-pack numbering, so the groundedness gate is unchanged. Measured on the development MacBook (Apple Silicon, Metal), six Appendix-A questions:
+
+  | `OLLAMA_MODEL` | GraphRAG p95 | mean citation coverage | gold recall | notes |
+  |---|---|---|---|---|
+  | `llama3.2:3b` (3B, default) | ~10–12 s | 0.82–0.92 | 1.0 | meets the 15 s SLO; terser, and one answer fell back to retrieve-only through the gate |
+  | `llama3.1` (8B) | ~21–27 s | 0.82 | 1.0 | fuller answers; misses the 15 s SLO on this hardware |
+
+  The default is `llama3.2:3b` so that NFR2 holds on a laptop. On a machine with a faster GPU, or when answer depth matters more than latency, run `ollama pull llama3.1`, set `OLLAMA_MODEL=llama3.1` in `.env`, and restart the API. The LLM health dot needs the exact tag to be pulled: `llama3.2:1b` does not satisfy `llama3.2:3b`.
+* **Citation forms:** the groundedness gate also accepts the variants local models commonly write, such as `[G1-G4]`, `(G20)`, `[G1, C2]`, `[rpt-001]` and `[R:001]`. Every tag must still match an id in the context pack. `(C2)` is deliberately not treated as a chunk citation, because in CTI prose it means command-and-control.

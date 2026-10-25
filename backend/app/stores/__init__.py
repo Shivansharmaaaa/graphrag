@@ -29,6 +29,8 @@ def connect() -> None:
         settings.neo4j_uri,
         auth=(settings.neo4j_user, settings.neo4j_password),
         connection_timeout=5,
+        # "constraint already exists" etc. arrive as INFORMATION notices on every start
+        notifications_min_severity="WARNING",
     )
     mongo_client = MongoClient(settings.mongo_uri, serverSelectionTimeoutMS=4000)
     redis_client = Redis.from_url(
@@ -139,7 +141,9 @@ def health() -> dict:
         t0 = time.perf_counter()
         r = httpx.get(f"{settings.ollama_url}/api/tags", timeout=1.5)
         models = [m.get("name", "") for m in r.json().get("models", [])]
-        has = any(m.split(":")[0] == settings.ollama_model.split(":")[0] for m in models)
+        # exact tag: "llama3.2:3b" must not be satisfied by "llama3.2:1b"; an untagged name means :latest
+        want = settings.ollama_model if ":" in settings.ollama_model else f"{settings.ollama_model}:latest"
+        has = want in models
         out["llm"] = {
             "ok": r.status_code == 200 and has,
             "detail": (f"ollama · {settings.ollama_model}" if has

@@ -118,3 +118,16 @@ def test_explicit_refusal_passes_through():
 def test_grouped_citations_are_expanded():
     g = graphrag.enforce_grounding("APT29 used SUNBURST [G1, C1].", CTX, [])
     assert g["citations"] == ["G1", "C1"] and not g["refused"]
+
+
+def test_variant_citation_forms_are_recovered():
+    ctx = {**CTX, "facts": [{"cid": f"G{i}"} for i in range(1, 5)]}
+    g = graphrag.enforce_grounding(
+        "Four actors use it [G1-G4]. Sandworm ran NotPetya (G2). It is documented [R:002]. "
+        "Also in [rpt-002].", ctx, [{"_id": "rpt-002"}])
+    assert g["citations"] == ["G1", "G2", "G3", "G4", "R:rpt-002"] and g["dropped"] == []
+
+
+def test_parenthesised_c2_is_not_a_citation():
+    g = graphrag.enforce_grounding("The actor rotated its command-and-control (C2) servers.", CTX, [])
+    assert g["refused"] and g["citations"] == []

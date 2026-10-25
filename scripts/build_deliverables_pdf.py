@@ -43,6 +43,8 @@ LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 
 def inline(text: str) -> str:
     text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    # the built-in PDF fonts have no emoji glyphs: both marks would render as the same box
+    text = text.replace("✅", "Yes").replace("❌", "No")
     text = LINK.sub(r'<link href="\2" color="#1b4a75">\1</link>', text)
     text = BOLD.sub(r"<b>\1</b>", text)
     text = INLINE_CODE.sub(r'<font face="Courier" size="8.5" color="#a3312a">\1</font>', text)
@@ -164,7 +166,7 @@ def title_page():
         'https://github.com/Shivansharmaaaa/graphrag',
         center("repo", fontSize=11, textColor=colors.HexColor("#1b4a75"))))
     flow.append(Spacer(1, 0.2 * inch))
-    flow.append(Paragraph("September 2026", center("date", fontSize=10, textColor=colors.HexColor("#888"))))
+    flow.append(Paragraph("September 2026 · results updated October 2026", center("date", fontSize=10, textColor=colors.HexColor("#888"))))
     flow.append(PageBreak())
     return flow
 
