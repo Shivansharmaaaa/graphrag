@@ -19,7 +19,8 @@ Four NoSQL engines, each used only for what it does best, plus a GraphRAG layer 
 ```
 nosql/
 ├── docker-compose.yml          # neo4j, mongo, redis, qdrant (+ profiles: app, llm)
-├── Makefile                    # make infra | install | api | web | seed | eval | test | test-integration
+├── docker-compose.bench.yml    # throwaway stores for `make bench` (alternate ports, no volumes)
+├── Makefile                    # make infra | install | api | web | seed | eval | test | test-integration | bench
 ├── .github/workflows/ci.yml    # CI: unit + integration tests + eval gates against ephemeral stores
 ├── .env.example                # copy to .env
 ├── samples/
@@ -45,11 +46,16 @@ nosql/
 │   │   ├── seed.py             # initial corpus loader (FR8)
 │   │   └── data.py             # public-knowledge corpus: actors, campaigns, malware, reports, IOCs
 │   ├── scripts/evaluate.py     # gold paths, latency SLOs, citation coverage, freshness, integrity
+│   ├── scripts/benchmark.py    # scalability 1×–200×, load, index ablations, HNSW recall (`make bench`)
 │   ├── pytest.ini              # `integration` marker (deselected by default)
 │   └── tests/
 │       ├── test_units.py       # unit tests (no DB needed)
 │       └── test_api.py         # integration tests: the real API against the live stores
-└── frontend/                   # React + Vite analyst console
+├── frontend/                   # React + Vite analyst console
+├── review1/                    # Review I report (design)
+├── reports/progress-report.md  # Review II progress report
+└── review3/                    # Review III deliverables: final report, user manual, slides, demo runbook,
+                                #   benchmark results, figures, screenshots and the scripts that build them
     ├── package.json, vite.config.js, index.html, Dockerfile, nginx.conf
     └── src/
         ├── main.jsx, App.jsx, api.js, styles.css
@@ -95,11 +101,13 @@ If `make` is installed you can use the shortcuts instead: `make infra`, `make in
 
 | Command | Needs | What it checks |
 |---|---|---|
-| `make test` | nothing | 15 unit tests: TLP policy, hashing, IOC extraction and refanging, entity linking, STIX mapping, chunking, the groundedness gate |
+| `make test` | nothing | 16 unit tests: TLP policy, hashing, IOC extraction and refanging, entity linking (including equivalence of the indexed linker with the reference linker), STIX mapping, chunking, the groundedness gate |
 | `make test-integration` | `make infra` | 15 API tests against the live stores: auth and roles, TLP on lists, search and GraphRAG context, publish → enforce → revoke, fail-closed enforcement, LLM-down fallback, audit replay, ingest fan-out, delete cascade and integrity. Everything a test writes is removed afterwards |
 | `make eval` / `make eval-check` | `make infra` (+ Ollama for `llm` mode) | the six Appendix-A questions (gold edges and reports), latency SLOs, expiry probe, integrity. `eval-check` exits non-zero when a correctness gate fails |
 
-CI (`.github/workflows/ci.yml`) runs all three on every push against fresh Neo4j, MongoDB, Redis and Qdrant service containers, plus the frontend build. CI has no LLM, so GraphRAG is checked in retrieve-only mode.
+| `make bench` | Docker (stop the demo stack first) | scalability from 1× to 200× the corpus, API load at 1–64 clients, Redis to 500k keys, MongoDB and Neo4j index ablations, Qdrant HNSW recall against exact search. Runs on its own throwaway stack and writes `review3/performance/benchmark_results.json` |
+
+CI (`.github/workflows/ci.yml`) runs the first three on every push against fresh Neo4j, MongoDB, Redis and Qdrant service containers, plus the frontend build. CI has no LLM, so GraphRAG is checked in retrieve-only mode.
 
 **Everything in containers:** `docker compose --profile app up -d --build` → console at http://localhost:5173 (add `--profile llm` for an Ollama container, then run `docker exec cti-ollama ollama pull llama3.2:3b` and set `OLLAMA_URL_DOCKER=http://ollama:11434` in `.env`).
 
@@ -193,4 +201,6 @@ curl -H "X-API-Key: edr-consumer-key" "http://localhost:8000/api/enforce/export?
   | `llama3.1` (8B) | ~21–27 s | 0.82 | 1.0 | fuller answers; misses the 15 s SLO on this hardware |
 
   The default is `llama3.2:3b` so that NFR2 holds on a laptop. On a machine with a faster GPU, or when answer depth matters more than latency, run `ollama pull llama3.1`, set `OLLAMA_MODEL=llama3.1` in `.env`, and restart the API. The LLM health dot needs the exact tag to be pulled: `llama3.2:1b` does not satisfy `llama3.2:3b`.
+* **Scalability fixes (Review III):** the benchmark found four defects that only appear on a large corpus. Entity linking now uses an inverted index instead of one regex per gazetteer entry; the all-actors shared-infrastructure query is bounded and missing nodes are fetched in one batched, index-backed lookup (a label-less `MATCH (n {id:…})` scans every node); ingest links `OBSERVED_AS` only for the plan's values; and each API worker thread gets its own Qdrant client, because the REST client is not safe to share under concurrent load. At 200× the corpus, GraphRAG retrieval p95 fell from 14.7 s to 185 ms. Details: `review3/Final_Report_GraphRAG_CTI_Platform.pdf`, Section 9.
+* **Isolated data directory:** `DATA_DIR` (default `backend/data`) holds the fitted embedder and the embedded-Qdrant fallback; the benchmark points it elsewhere so it never touches the demo stack's files.
 * **Citation forms:** the groundedness gate also accepts the variants local models commonly write, such as `[G1-G4]`, `(G20)`, `[G1, C2]`, `[rpt-001]` and `[R:001]`. Every tag must still match an id in the context pack. `(C2)` is deliberately not treated as a chunk citation, because in CTI prose it means command-and-control.

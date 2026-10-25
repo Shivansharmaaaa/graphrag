@@ -60,7 +60,7 @@ def _retrieve(question: str, user: dict, max_hops: int, k: int, t: dict) -> dict
     findings = {"shared_infra": [], "tool_users": []}
     if any(w in f" {q_low}" for w in SHARE_WORDS):
         for a in actors or [None]:
-            findings["shared_infra"] += graph.shared_infrastructure(a, sink=t)
+            findings["shared_infra"] += graph.shared_infrastructure(a, sink=t, limit=25)
     if tools and any(w in q_low for w in TOOL_WORDS):
         for m in tools:
             findings["tool_users"].append(graph.tool_users(m, sink=t))
@@ -74,11 +74,7 @@ def _retrieve(question: str, user: dict, max_hops: int, k: int, t: dict) -> dict
     for tu in findings["tool_users"]:
         extra_edges += [(u["actor"], "USES", tu["malware_id"]) for u in tu["users"]]
     names = {n["id"]: n for n in sub["nodes"]}
-    missing = {x for e in extra_edges for x in (e[0], e[2])} - set(names)
-    for nid in missing:
-        n = graph.get_node(nid)
-        if n:
-            names[nid] = n
+    names.update(graph.get_nodes({x for e in extra_edges for x in (e[0], e[2])} - set(names), sink=t))
     edge_set = {(e["source"], e["type"], e["target"]) for e in sub["edges"]}
     edges = list(sub["edges"]) + [{"source": s, "type": r, "target": d, "props": {}}
                                   for s, r, d in extra_edges if (s, r, d) not in edge_set]

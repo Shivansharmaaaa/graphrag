@@ -4,7 +4,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 PROJECT_DIR = BACKEND_DIR.parent
-DATA_DIR = BACKEND_DIR / "data"
 
 
 class Settings(BaseSettings):
@@ -59,7 +58,10 @@ class Settings(BaseSettings):
     llm_keep_alive: str = "30m"        # keep the model resident between questions
 
     auto_seed: bool = True
+    # fitted embedder + embedded-Qdrant fallback; point elsewhere to isolate a second stack
+    data_dir: Path = BACKEND_DIR / "data"
 
 
 settings = Settings()
+DATA_DIR = settings.data_dir
 DATA_DIR.mkdir(parents=True, exist_ok=True)

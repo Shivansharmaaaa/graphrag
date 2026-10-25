@@ -1,5 +1,5 @@
 # GraphRAG CTI Platform — local helpers
-.PHONY: infra down install api web seed eval eval-check test test-integration llm app
+.PHONY: infra down install api web seed eval eval-check bench test test-integration llm app
 
 infra:            ## start Neo4j, MongoDB, Redis, Qdrant
 	docker compose up -d
@@ -29,6 +29,15 @@ eval:             ## Review-III style evaluation: gold paths, SLOs, citation cov
 
 eval-check:       ## same, but exit non-zero if a correctness gate fails (used by CI)
 	cd backend && ../.venv/bin/python -m scripts.evaluate --check
+
+BENCH_ENV = CTI_BENCH=1 NEO4J_URI=bolt://localhost:17687 MONGO_URI=mongodb://localhost:27018 \
+	REDIS_URL=redis://localhost:16379/0 QDRANT_PORT=16333 OLLAMA_URL=http://127.0.0.1:9 \
+	DATA_DIR=$(CURDIR)/backend/data/bench
+
+bench:            ## scalability / indexing / load benchmarks on a throwaway stack (~15 min; stop the demo stack first for clean numbers)
+	docker compose -p cti-bench -f docker-compose.bench.yml up -d --wait
+	cd backend && $(BENCH_ENV) ../.venv/bin/python -m scripts.benchmark $(ARGS); \
+	  status=$$?; cd .. && docker compose -p cti-bench -f docker-compose.bench.yml down -v; exit $$status
 
 test:             ## unit tests (no databases needed)
 	cd backend && ../.venv/bin/python -m pytest -q

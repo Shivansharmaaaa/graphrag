@@ -12,3 +12,6 @@ backend/data/
 .vscode/
 eval_report.json
 _backup_original_code/
+
+# Review III document builds (contents page cache)
+review3/build/

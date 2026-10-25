@@ -1,0 +1,42 @@
+# Throwaway stores for `make bench` (backend/scripts/benchmark.py). Alternate ports and no named
+# volumes, so the benchmark's synthetic data never touches the demo stack in docker-compose.yml.
+#   docker compose -p cti-bench -f docker-compose.bench.yml up -d --wait
+#   docker compose -p cti-bench -f docker-compose.bench.yml down -v
+services:
+  neo4j:
+    image: neo4j:5.26-community
+    environment:
+      NEO4J_AUTH: neo4j/ctiplatform
+      NEO4J_server_memory_heap_max__size: 1g
+      NEO4J_server_memory_pagecache_size: 512m
+    ports: ["17687:7687"]
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p ctiplatform 'RETURN 1' || exit 1"]
+      interval: 5s
+      retries: 30
+      start_period: 15s
+
+  mongo:
+    image: mongo:7
+    command: ["mongod", "--wiredTigerCacheSizeGB", "0.5"]
+    ports: ["27018:27017"]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports: ["16379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+
+  qdrant:
+    image: qdrant/qdrant:v1.13.4
+    ports: ["16333:6333"]
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/6333'"]
+      interval: 5s
+      retries: 20

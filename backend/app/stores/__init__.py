@@ -2,9 +2,13 @@
 
 Always access clients through the module (``from app import stores; stores.redis_client``)
 — never ``from app.stores import redis_client`` — because they are created in ``connect()``.
+The Neo4j, MongoDB and Redis clients are thread-safe pools. The Qdrant REST client is not
+safe to share between FastAPI's worker threads (a socket can be closed under another
+thread's read), so ``stores.qdrant_client`` resolves to one client per thread.
 """
 from __future__ import annotations
 
+import threading
 import time
 from contextlib import contextmanager
 
@@ -19,12 +23,38 @@ from app.config import DATA_DIR, settings
 neo4j_driver = None
 mongo_client: MongoClient | None = None
 redis_client: Redis | None = None
-qdrant_client: QdrantClient | None = None
 qdrant_mode = "server"
+_qdrant_shared: QdrantClient | None = None  # embedded mode: one client owns the storage dir
+_qdrant_local = threading.local()
+_qdrant_clients: list[QdrantClient] = []
+_qdrant_gen = 0  # bumped by connect()/close() so threads drop clients from a previous connect
+_qdrant_lock = threading.Lock()
+
+
+def _new_qdrant() -> QdrantClient:
+    return QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port, timeout=5)
+
+
+def _qdrant() -> QdrantClient | None:
+    if _qdrant_shared is not None or not _qdrant_clients:
+        return _qdrant_shared
+    gen, client = getattr(_qdrant_local, "client", (None, None))
+    if gen != _qdrant_gen:
+        client = _new_qdrant()
+        _qdrant_local.client = (_qdrant_gen, client)
+        with _qdrant_lock:
+            _qdrant_clients.append(client)
+    return client
+
+
+def __getattr__(name: str):  # PEP 562: `stores.qdrant_client` is per thread
+    if name == "qdrant_client":
+        return _qdrant()
+    raise AttributeError(name)
 
 
 def connect() -> None:
-    global neo4j_driver, mongo_client, redis_client, qdrant_client, qdrant_mode
+    global neo4j_driver, mongo_client, redis_client, qdrant_mode, _qdrant_shared, _qdrant_gen
     neo4j_driver = GraphDatabase.driver(
         settings.neo4j_uri,
         auth=(settings.neo4j_user, settings.neo4j_password),
@@ -36,25 +66,31 @@ def connect() -> None:
     redis_client = Redis.from_url(
         settings.redis_url, decode_responses=True, socket_timeout=2, socket_connect_timeout=2
     )
+    _qdrant_gen += 1
     try:
-        qdrant_client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port, timeout=5)
-        qdrant_client.get_collections()
-        qdrant_mode = "server"
+        probe = _new_qdrant()
+        probe.get_collections()
+        qdrant_mode, _qdrant_shared = "server", None
+        _qdrant_local.client = (_qdrant_gen, probe)
+        with _qdrant_lock:
+            _qdrant_clients.append(probe)
     except Exception:
         # Fallback so a laptop without the Qdrant container can still run the platform.
-        qdrant_client = QdrantClient(path=str(DATA_DIR / "qdrant"))
-        qdrant_mode = "embedded"
+        qdrant_mode, _qdrant_shared = "embedded", QdrantClient(path=str(DATA_DIR / "qdrant"))
 
 
 def close() -> None:
-    global neo4j_driver, mongo_client, redis_client, qdrant_client
-    for c in (neo4j_driver, mongo_client, redis_client, qdrant_client):
+    global neo4j_driver, mongo_client, redis_client, _qdrant_shared, _qdrant_gen
+    with _qdrant_lock:
+        clients, _qdrant_clients[:] = list(_qdrant_clients), []
+    for c in (neo4j_driver, mongo_client, redis_client, _qdrant_shared, *clients):
         try:
             if c:
                 c.close()
         except Exception:
             pass
-    neo4j_driver = mongo_client = redis_client = qdrant_client = None
+    neo4j_driver = mongo_client = redis_client = _qdrant_shared = None
+    _qdrant_gen += 1
 
 
 def ensure_schema() -> None:
@@ -67,6 +103,7 @@ def ensure_schema() -> None:
         "CREATE CONSTRAINT indicator_key IF NOT EXISTS FOR (n:Indicator) REQUIRE (n.type, n.value) IS UNIQUE",
         "CREATE INDEX infra_value IF NOT EXISTS FOR (n:Infrastructure) ON (n.value)",
         "CREATE INDEX indicator_value IF NOT EXISTS FOR (n:Indicator) ON (n.value)",
+        "CREATE INDEX indicator_id IF NOT EXISTS FOR (n:Indicator) ON (n.id)",
     ]
     with neo4j_session() as s:
         for stmt in stmts:
@@ -83,7 +120,7 @@ def ensure_schema() -> None:
     db.audit_log.create_index([("ts", DESCENDING)])
     db.ingest_jobs.create_index([("created_at", DESCENDING)])
     db.users.create_index([("username", ASCENDING)], unique=True)
-    db.meta.update_one({"_id": "schema"}, {"$set": {"version": 1}}, upsert=True)
+    db.meta.update_one({"_id": "schema"}, {"$set": {"version": 2}}, upsert=True)
 
 
 def wait_for_stores(timeout: int = 90) -> dict:
@@ -129,10 +166,10 @@ def health() -> dict:
         out["redis"]["detail"] = str(e)[:180]
     try:
         t0 = time.perf_counter()
-        names = [c.name for c in qdrant_client.get_collections().collections]
+        names = [c.name for c in _qdrant().get_collections().collections]
         detail = f"{qdrant_mode}: {', '.join(names) or 'empty'}"
         if settings.qdrant_collection in names:
-            cnt = qdrant_client.count(settings.qdrant_collection).count
+            cnt = _qdrant().count(settings.qdrant_collection).count
             detail += f" ({cnt} chunks)"
         out["qdrant"] = {"ok": True, "detail": detail, "latency_ms": _ms(t0)}
     except Exception as e:

@@ -283,9 +283,13 @@ def _step_neo4j(plan: dict) -> dict:
                                ("malware", "Malware")):
                 s.run(f"""UNWIND $ids AS eid MATCH (x:{label} {{id:eid}}), (r:Report {{id:$rid}})
                           MERGE (x)-[:MENTIONED_IN]->(r)""", ids=doc.get(key, []), rid=doc["_id"])
-        s.run("""MATCH (i:Infrastructure), (x:Indicator) WHERE i.value = x.value
-                 MERGE (i)-[:OBSERVED_AS]->(x)""")
-    extract.invalidate_gazetteer()
+        # link only this plan's values: a whole-graph join here grows with every ingest
+        values = sorted({n["props"].get("value") for n in plan["nodes"]
+                         if n["label"] in ("Infrastructure", "Indicator") and n["props"].get("value")})
+        s.run("""UNWIND $values AS v MATCH (i:Infrastructure {value: v}), (x:Indicator {value: v})
+                 MERGE (i)-[:OBSERVED_AS]->(x)""", values=values)
+    if plan["nodes"]:  # only new graph entities change what linking can match
+        extract.invalidate_gazetteer()
     return {"nodes": len(plan["nodes"]), "edges": len(plan["edges"]), "reports": len(plan["reports"])}
 
 

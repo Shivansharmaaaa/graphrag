@@ -49,6 +49,43 @@ def test_entity_linking_by_alias():
     assert ids == {"apt28", "mimikatz"}
 
 
+def _reference_link(text: str) -> list[dict]:
+    """The original linker (one regex per gazetteer form): the indexed one must agree with it."""
+    import re
+    low = extract.refang(text or "").lower()
+    hits = {}
+    for row in extract._gaz():
+        for form in extract._surface_forms(row):
+            if re.search(r"(?<![\w-])" + re.escape(form.lower()) + r"(?![\w-])", low):
+                prev = hits.get(row["id"])
+                if not prev or len(form) > len(prev["matched"]):
+                    hits[row["id"]] = {"id": row["id"], "label": row["label"],
+                                       "name": row.get("name") or row.get("value") or row["id"],
+                                       "matched": form}
+                break
+    return sorted(hits.values(), key=lambda h: (h["label"], h["id"]))
+
+
+def test_indexed_linking_matches_reference_linker():
+    extract._gaz_cache.update(at=9e18, rows=[
+        {"id": "apt28", "label": "ThreatActor", "name": "APT28", "aliases": ["Fancy Bear"], "value": None},
+        {"id": "x-agent", "label": "Malware", "name": "X-Agent", "aliases": [], "value": None},
+        {"id": "cobalt-strike", "label": "Malware", "name": "Cobalt Strike", "aliases": ["Beacon"], "value": None},
+        {"id": "industroyer", "label": "Malware", "name": "Industroyer / CrashOverride", "aliases": [], "value": None},
+        {"id": "T1566", "label": "Technique", "name": "Phishing", "aliases": [], "value": None},
+        {"id": "infra-evil", "label": "Infrastructure", "name": None, "aliases": [], "value": "evil.com"},
+        {"id": "infra-vps", "label": "Infrastructure", "name": None, "aliases": [], "value": "185.86.77.12"},
+        {"id": "ioc:ip:185.86.77.12", "label": "Indicator", "name": None, "aliases": [], "value": "185.86.77.12"},
+    ])
+    texts = ["mail.evil.com and evil.com.au", "x-agent-v2, my-x-agent, a.x-agent", "APT28_x vs (apt28)",
+             "Cobalt Strike Beacon via T1566 phishing", "Industroyer / CrashOverride hit the grid",
+             "beacon to 185.86.77[.]12 and 185.86.77.123", "Fancy Bear, fancy-bear, FANCY BEAR.", ""]
+    for t in texts:
+        assert extract.link_entities(t) == _reference_link(t), t
+    assert extract.resolve_name("Malware", "beacon") == "cobalt-strike"
+    assert extract.resolve_name("ThreatActor", "Unknown") is None
+
+
 # ---------------------------------------------------------------- blocklist key schema
 def test_blocklist_normalisation():
     assert blocklist.normalise("domain", "Evil.COM.") == ("domain", "evil.com")

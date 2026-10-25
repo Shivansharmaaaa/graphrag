@@ -80,10 +80,18 @@ def search(q: str, limit: int = 20, label: str | None = None) -> list[dict]:
     return [node_dict(r["n"]) for r in recs]
 
 
+def _match_by_id(var: str, labels=LABELS) -> str:
+    """`MATCH (n {id:$id})` has no label, so Neo4j scans every node; a UNION of labelled
+    matches uses each label's id constraint (an index seek) instead."""
+    return f"CALL ({var}) {{ " + " UNION ALL ".join(
+        f"MATCH (n:{lab} {{id: {var}}}) RETURN n" for lab in labels) + " }"
+
+
 def get_node(node_id: str) -> dict | None:
     recs = _run(
-        """
-        MATCH (n {id:$id})
+        f"""
+        WITH $id AS id {_match_by_id("id")}
+        WITH n LIMIT 1
         OPTIONAL MATCH (n)-[r]-()
         RETURN n, count(r) AS degree
         """, id=node_id)
@@ -92,6 +100,15 @@ def get_node(node_id: str) -> dict | None:
     d = node_dict(recs[0]["n"])
     d["degree"] = recs[0]["degree"]
     return d
+
+
+def get_nodes(ids, sink: dict | None = None,
+              labels=("ThreatActor", "Infrastructure", "Malware")) -> dict[str, dict]:
+    """Batch lookup by id (one round trip, index seeks), keyed by id."""
+    if not ids:
+        return {}
+    recs = _run(f"UNWIND $ids AS id {_match_by_id('id', labels)} RETURN n", sink, ids=list(ids))
+    return {d["id"]: d for d in (node_dict(r["n"]) for r in recs)}
 
 
 def gazetteer() -> list[dict]:
@@ -144,8 +161,10 @@ def overview(limit: int = 400, include_reports: bool = False) -> dict:
     return _collect(recs, "p")
 
 
-def shared_infrastructure(actor_id: str | None = None, sink: dict | None = None) -> list[dict]:
-    """UC1 / flagship query: actors sharing an Infrastructure node via USES_INFRA."""
+def shared_infrastructure(actor_id: str | None = None, sink: dict | None = None,
+                          limit: int = 1000) -> list[dict]:
+    """UC1 / flagship query: actors sharing an Infrastructure node via USES_INFRA.
+    Pairs backed by a shared report come first; `limit` bounds the all-actors form."""
     recs = _run(
         """
         MATCH (a:ThreatActor)-[:USES_INFRA]->(i:Infrastructure)<-[:USES_INFRA]-(b:ThreatActor)
@@ -156,8 +175,9 @@ def shared_infrastructure(actor_id: str | None = None, sink: dict | None = None)
                i.id AS infra_id, i.value AS infra, i.kind AS kind,
                collect(DISTINCT m.name) AS hosted_malware,
                collect(DISTINCT r.id) AS reports
-        ORDER BY actor, other
-        """, sink, id=actor_id)
+        ORDER BY size(reports) DESC, actor, other
+        LIMIT $limit
+        """, sink, id=actor_id, limit=limit)
     return [dict(r) for r in recs]
 
 
