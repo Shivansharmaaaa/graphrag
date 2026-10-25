@@ -1,0 +1,16 @@
+{
+  "name": "review3",
+  "private": true,
+  "description": "Review-III deliverables: final report, user manual, screenshots",
+  "scripts": {
+    "figures": "python3 generate_figures.py && python3 make_charts.py",
+    "report": "node generate_report.js",
+    "manual": "node generate_manual.js",
+    "screenshots": "node capture_screenshots.js screenshots"
+  },
+  "dependencies": {
+    "docx": "9.7.1",
+    "playwright-core": "1.48.2",
+    "pptxgenjs": "3.12.0"
+  }
+}

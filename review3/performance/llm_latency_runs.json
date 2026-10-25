@@ -1,0 +1,177 @@
+{
+  "slo_p95_s": 15,
+  "runs": [
+    {
+      "label": "Sept baseline",
+      "date": "2026-09-25",
+      "model": "llama3.1:8b",
+      "prompt": "full evidence pack",
+      "gate": "original",
+      "per_question_s": [
+        43.9,
+        30.3,
+        29.4,
+        26.3,
+        36.4,
+        52.3
+      ],
+      "p95_s": 52.3,
+      "mean_citation_coverage": 0.863,
+      "gold_edge_recall": 1.0,
+      "gold_report_recall": 1.0,
+      "source": "reports/progress-report.md (2026-09-25 acceptance run)"
+    },
+    {
+      "label": "Re-measured baseline",
+      "date": "2026-10-25",
+      "model": "llama3.1:8b",
+      "prompt": "full evidence pack",
+      "gate": "original",
+      "per_question_s": [
+        34.8,
+        28.2,
+        30.4,
+        28.2,
+        37.5,
+        26.5
+      ],
+      "p95_s": 37.5,
+      "mean_citation_coverage": 0.874,
+      "gold_edge_recall": 1.0,
+      "gold_report_recall": 1.0,
+      "source": "make eval, before the prompt budget"
+    },
+    {
+      "label": "Prompt budget",
+      "date": "2026-10-25",
+      "model": "llama3.1:8b",
+      "prompt": "budgeted",
+      "gate": "original",
+      "per_question_s": [
+        19.2,
+        22.2,
+        17.5,
+        17.3,
+        19.5,
+        16.6
+      ],
+      "p95_s": 22.2,
+      "mean_citation_coverage": 0.751,
+      "gold_edge_recall": 1.0,
+      "gold_report_recall": 1.0,
+      "source": "make eval, budget only"
+    },
+    {
+      "label": "Budget + gate fix",
+      "date": "2026-10-25",
+      "model": "llama3.1:8b",
+      "prompt": "budgeted",
+      "gate": "variant citation forms",
+      "per_question_s": [
+        26.9,
+        19.4,
+        19.6,
+        15.5,
+        15.8,
+        20.8
+      ],
+      "modes": [
+        "llm",
+        "llm",
+        "llm",
+        "llm",
+        "llm",
+        "llm"
+      ],
+      "p95_s": 26.9,
+      "mean_citation_coverage": 0.823,
+      "gold_edge_recall": 1.0,
+      "gold_report_recall": 1.0,
+      "source": "review3/performance/eval_llama3.1_budget.json",
+      "note": "question 1 includes a model reload after a 3B run"
+    },
+    {
+      "label": "Budget + gate fix",
+      "date": "2026-10-25",
+      "model": "llama3.2:3b",
+      "prompt": "budgeted",
+      "gate": "variant citation forms",
+      "per_question_s": [
+        9.1,
+        12.4,
+        6.8,
+        6.0,
+        9.2,
+        10.2
+      ],
+      "modes": [
+        "llm",
+        "retrieve-only (llm answer failed grounding)",
+        "llm",
+        "llm",
+        "llm",
+        "llm"
+      ],
+      "p95_s": 12.4,
+      "mean_citation_coverage": 0.919,
+      "gold_edge_recall": 1.0,
+      "gold_report_recall": 1.0,
+      "source": "review3/performance/eval_llama3.2-3b_budget.json"
+    },
+    {
+      "label": "Default (final)",
+      "date": "2026-10-25",
+      "model": "llama3.2:3b",
+      "prompt": "budgeted",
+      "gate": "variant citation forms",
+      "per_question_s": [
+        7.8,
+        9.5,
+        6.4,
+        6.1,
+        9.2,
+        9.4
+      ],
+      "modes": [
+        "llm",
+        "retrieve-only (llm answer failed grounding)",
+        "llm",
+        "llm",
+        "llm",
+        "llm"
+      ],
+      "p95_s": 9.5,
+      "mean_citation_coverage": 0.794,
+      "gold_edge_recall": 1.0,
+      "gold_report_recall": 1.0,
+      "source": "review3/performance/eval_llama3.2-3b_default.json",
+      "note": "final code, after the scalability fixes"
+    }
+  ],
+  "call_profile": {
+    "question": "Which threat actors share command-and-control infrastructure, and what malware was hosted there?",
+    "prompt_chars_full": 17663,
+    "prompt_chars_budgeted": 9226,
+    "calls": [
+      {
+        "model": "llama3.1:8b",
+        "prompt": "full",
+        "prompt_tokens": 4991,
+        "prompt_eval_s": 17.0,
+        "output_tokens": 117,
+        "generation_s": 7.4,
+        "wall_s": 24.5
+      },
+      {
+        "model": "llama3.2:3b",
+        "prompt": "full",
+        "prompt_tokens": 5001,
+        "prompt_eval_s": 8.8,
+        "output_tokens": 67,
+        "generation_s": 2.1,
+        "load_s": 1.9,
+        "wall_s": 13.0
+      }
+    ]
+  }
+}

@@ -1,0 +1,1583 @@
+{
+  "environment": {
+    "date": "2026-10-25",
+    "python": "3.11.7",
+    "host": "Apple M3 Pro",
+    "host_memory_gb": 18.0,
+    "docker_vm": "2 vCPU, 4094447616 bytes",
+    "neo4j": "5.26.31",
+    "mongodb": "7.0.43",
+    "redis": "7.4.11",
+    "qdrant": "1.13.4",
+    "embedder": "tfidf (threat_chunks)"
+  },
+  "scale": {
+    "rows": [
+      {
+        "scale": 1,
+        "load_seconds": {
+          "neo4j_s": 1.25,
+          "mongodb_s": 0.01,
+          "qdrant_s": 0.19,
+          "redis_s": 0.01
+        },
+        "nodes": 87,
+        "relationships": 162,
+        "reports": 12,
+        "chunks": 25,
+        "iocs": 15,
+        "neo4j": {
+          "neighbourhood_1hop": {
+            "n": 30,
+            "mean": 2.835,
+            "p50": 2.608,
+            "p95": 4.424,
+            "p99": 7.046
+          },
+          "neighbourhood_2hop": {
+            "n": 30,
+            "mean": 4.741,
+            "p50": 4.063,
+            "p95": 9.513,
+            "p99": 13.234
+          },
+          "neighbourhood_3hop": {
+            "n": 30,
+            "mean": 9.897,
+            "p50": 10.5,
+            "p95": 13.568,
+            "p99": 13.821
+          },
+          "apt28_2hop_edges": 44,
+          "shared_infrastructure": {
+            "n": 30,
+            "mean": 3.803,
+            "p50": 1.424,
+            "p95": 5.481,
+            "p99": 66.583
+          },
+          "shortest_path": {
+            "n": 30,
+            "mean": 2.156,
+            "p50": 1.817,
+            "p95": 3.759,
+            "p99": 4.339
+          }
+        },
+        "mongodb": {
+          "list_by_actor": {
+            "n": 50,
+            "mean": 1.282,
+            "p50": 1.22,
+            "p95": 1.606,
+            "p99": 2.268
+          },
+          "get_by_id": {
+            "n": 200,
+            "mean": 0.625,
+            "p50": 0.581,
+            "p95": 0.846,
+            "p99": 0.971
+          },
+          "hydrate_10": {
+            "n": 50,
+            "mean": 0.847,
+            "p50": 0.793,
+            "p95": 1.083,
+            "p99": 1.195
+          }
+        },
+        "qdrant": {
+          "knn_k6_tlp_filter": {
+            "n": 60,
+            "mean": 3.587,
+            "p50": 3.246,
+            "p95": 5.705,
+            "p99": 6.673
+          }
+        },
+        "redis": {
+          "blocklist_get": {
+            "n": 1000,
+            "mean": 0.286,
+            "p50": 0.269,
+            "p95": 0.366,
+            "p99": 0.416
+          }
+        },
+        "graphrag_retrieve_only": {
+          "total": {
+            "n": 18,
+            "mean": 32.239,
+            "p50": 30.2,
+            "p95": 42.7,
+            "p99": 60.3
+          },
+          "channels": {
+            "linking": {
+              "n": 18,
+              "mean": 0.047,
+              "p50": 0.03,
+              "p95": 0.11,
+              "p99": 0.12
+            },
+            "qdrant": {
+              "n": 18,
+              "mean": 2.496,
+              "p50": 2.21,
+              "p95": 3.47,
+              "p99": 4.01
+            },
+            "neo4j": {
+              "n": 18,
+              "mean": 17.42,
+              "p50": 16.18,
+              "p95": 23.17,
+              "p99": 40.9
+            },
+            "mongodb": {
+              "n": 18,
+              "mean": 1.485,
+              "p50": 0.96,
+              "p95": 2.93,
+              "p99": 5.44
+            },
+            "redis": {
+              "n": 18,
+              "mean": 0.835,
+              "p50": 0.57,
+              "p95": 1.89,
+              "p99": 2.41
+            }
+          },
+          "max_evidence_edges": 60,
+          "max_documents": 9
+        },
+        "ingest": {
+          "per_report_ms": {
+            "n": 20,
+            "mean": 56.989,
+            "p50": 49.754,
+            "p95": 70.781,
+            "p99": 233.168
+          },
+          "reports_per_s": 17.5,
+          "steps_ms": {
+            "neo4j": {
+              "n": 20,
+              "mean": 29.405,
+              "p50": 23.0,
+              "p95": 41.3,
+              "p99": 187.9
+            },
+            "mongodb": {
+              "n": 20,
+              "mean": 0.925,
+              "p50": 0.9,
+              "p95": 1.7,
+              "p99": 1.8
+            },
+            "qdrant": {
+              "n": 20,
+              "mean": 17.82,
+              "p50": 17.6,
+              "p95": 20.3,
+              "p99": 35.6
+            },
+            "redis": {
+              "n": 20,
+              "mean": 1.14,
+              "p50": 1.1,
+              "p95": 1.5,
+              "p99": 1.7
+            }
+          }
+        }
+      },
+      {
+        "scale": 10,
+        "load_seconds": {
+          "neo4j_s": 2.85,
+          "mongodb_s": 0.06,
+          "qdrant_s": 1.02,
+          "redis_s": 0.07
+        },
+        "nodes": 762,
+        "relationships": 1665,
+        "reports": 120,
+        "chunks": 250,
+        "iocs": 150,
+        "neo4j": {
+          "neighbourhood_1hop": {
+            "n": 30,
+            "mean": 2.134,
+            "p50": 1.94,
+            "p95": 4.07,
+            "p99": 4.17
+          },
+          "neighbourhood_2hop": {
+            "n": 30,
+            "mean": 3.398,
+            "p50": 3.466,
+            "p95": 4.698,
+            "p99": 5.493
+          },
+          "neighbourhood_3hop": {
+            "n": 30,
+            "mean": 8.7,
+            "p50": 8.208,
+            "p95": 12.413,
+            "p99": 19.235
+          },
+          "apt28_2hop_edges": 40,
+          "shared_infrastructure": {
+            "n": 30,
+            "mean": 1.401,
+            "p50": 1.217,
+            "p95": 2.322,
+            "p99": 2.421
+          },
+          "shortest_path": {
+            "n": 30,
+            "mean": 1.371,
+            "p50": 1.313,
+            "p95": 2.055,
+            "p99": 2.059
+          }
+        },
+        "mongodb": {
+          "list_by_actor": {
+            "n": 50,
+            "mean": 0.955,
+            "p50": 0.942,
+            "p95": 1.039,
+            "p99": 1.119
+          },
+          "get_by_id": {
+            "n": 200,
+            "mean": 0.432,
+            "p50": 0.436,
+            "p95": 0.471,
+            "p99": 0.511
+          },
+          "hydrate_10": {
+            "n": 50,
+            "mean": 0.506,
+            "p50": 0.502,
+            "p95": 0.563,
+            "p99": 0.581
+          }
+        },
+        "qdrant": {
+          "knn_k6_tlp_filter": {
+            "n": 60,
+            "mean": 3.108,
+            "p50": 3.063,
+            "p95": 3.372,
+            "p99": 3.442
+          }
+        },
+        "redis": {
+          "blocklist_get": {
+            "n": 1000,
+            "mean": 0.273,
+            "p50": 0.256,
+            "p95": 0.35,
+            "p99": 0.529
+          }
+        },
+        "graphrag_retrieve_only": {
+          "total": {
+            "n": 18,
+            "mean": 39.367,
+            "p50": 40.0,
+            "p95": 46.4,
+            "p99": 65.9
+          },
+          "channels": {
+            "linking": {
+              "n": 18,
+              "mean": 0.049,
+              "p50": 0.04,
+              "p95": 0.07,
+              "p99": 0.1
+            },
+            "qdrant": {
+              "n": 18,
+              "mean": 2.752,
+              "p50": 2.59,
+              "p95": 4.15,
+              "p99": 5.19
+            },
+            "neo4j": {
+              "n": 18,
+              "mean": 24.441,
+              "p50": 22.21,
+              "p95": 31.73,
+              "p99": 50.84
+            },
+            "mongodb": {
+              "n": 18,
+              "mean": 1.068,
+              "p50": 0.94,
+              "p95": 1.41,
+              "p99": 2.19
+            },
+            "redis": {
+              "n": 18,
+              "mean": 0.914,
+              "p50": 0.75,
+              "p95": 1.99,
+              "p99": 2.35
+            }
+          },
+          "max_evidence_edges": 60,
+          "max_documents": 10
+        },
+        "ingest": {
+          "per_report_ms": {
+            "n": 20,
+            "mean": 30.024,
+            "p50": 28.442,
+            "p95": 45.168,
+            "p99": 48.344
+          },
+          "reports_per_s": 33.3,
+          "steps_ms": {
+            "neo4j": {
+              "n": 20,
+              "mean": 11.59,
+              "p50": 10.2,
+              "p95": 19.8,
+              "p99": 25.1
+            },
+            "mongodb": {
+              "n": 20,
+              "mean": 0.73,
+              "p50": 0.5,
+              "p95": 1.5,
+              "p99": 2.3
+            },
+            "qdrant": {
+              "n": 20,
+              "mean": 10.93,
+              "p50": 11.0,
+              "p95": 14.1,
+              "p99": 15.5
+            },
+            "redis": {
+              "n": 20,
+              "mean": 1.005,
+              "p50": 0.8,
+              "p95": 1.9,
+              "p99": 2.9
+            }
+          }
+        }
+      },
+      {
+        "scale": 50,
+        "load_seconds": {
+          "neo4j_s": 10.23,
+          "mongodb_s": 0.29,
+          "qdrant_s": 5.01,
+          "redis_s": 0.24
+        },
+        "nodes": 3762,
+        "relationships": 8345,
+        "reports": 600,
+        "chunks": 1250,
+        "iocs": 750,
+        "neo4j": {
+          "neighbourhood_1hop": {
+            "n": 30,
+            "mean": 2.177,
+            "p50": 2.176,
+            "p95": 2.55,
+            "p99": 3.571
+          },
+          "neighbourhood_2hop": {
+            "n": 30,
+            "mean": 5.25,
+            "p50": 4.772,
+            "p95": 8.599,
+            "p99": 24.732
+          },
+          "neighbourhood_3hop": {
+            "n": 30,
+            "mean": 11.568,
+            "p50": 9.696,
+            "p95": 20.15,
+            "p99": 43.748
+          },
+          "apt28_2hop_edges": 41,
+          "shared_infrastructure": {
+            "n": 30,
+            "mean": 2.383,
+            "p50": 1.034,
+            "p95": 2.113,
+            "p99": 37.624
+          },
+          "shortest_path": {
+            "n": 30,
+            "mean": 3.168,
+            "p50": 2.901,
+            "p95": 3.315,
+            "p99": 10.527
+          }
+        },
+        "mongodb": {
+          "list_by_actor": {
+            "n": 50,
+            "mean": 1.178,
+            "p50": 1.115,
+            "p95": 1.501,
+            "p99": 1.633
+          },
+          "get_by_id": {
+            "n": 200,
+            "mean": 0.494,
+            "p50": 0.469,
+            "p95": 0.659,
+            "p99": 0.744
+          },
+          "hydrate_10": {
+            "n": 50,
+            "mean": 0.57,
+            "p50": 0.554,
+            "p95": 0.731,
+            "p99": 0.774
+          }
+        },
+        "qdrant": {
+          "knn_k6_tlp_filter": {
+            "n": 60,
+            "mean": 3.355,
+            "p50": 3.32,
+            "p95": 3.748,
+            "p99": 4.093
+          }
+        },
+        "redis": {
+          "blocklist_get": {
+            "n": 1000,
+            "mean": 0.277,
+            "p50": 0.258,
+            "p95": 0.352,
+            "p99": 0.446
+          }
+        },
+        "graphrag_retrieve_only": {
+          "total": {
+            "n": 18,
+            "mean": 48.128,
+            "p50": 39.8,
+            "p95": 80.7,
+            "p99": 96.5
+          },
+          "channels": {
+            "linking": {
+              "n": 18,
+              "mean": 0.097,
+              "p50": 0.05,
+              "p95": 0.21,
+              "p99": 0.22
+            },
+            "qdrant": {
+              "n": 18,
+              "mean": 2.833,
+              "p50": 2.36,
+              "p95": 3.98,
+              "p99": 4.54
+            },
+            "neo4j": {
+              "n": 18,
+              "mean": 32.168,
+              "p50": 24.05,
+              "p95": 61.81,
+              "p99": 78.92
+            },
+            "mongodb": {
+              "n": 18,
+              "mean": 1.01,
+              "p50": 0.89,
+              "p95": 1.27,
+              "p99": 2.58
+            },
+            "redis": {
+              "n": 18,
+              "mean": 0.673,
+              "p50": 0.63,
+              "p95": 1.35,
+              "p99": 1.9
+            }
+          },
+          "max_evidence_edges": 60,
+          "max_documents": 10
+        },
+        "ingest": {
+          "per_report_ms": {
+            "n": 20,
+            "mean": 30.136,
+            "p50": 22.641,
+            "p95": 39.704,
+            "p99": 135.891
+          },
+          "reports_per_s": 33.2,
+          "steps_ms": {
+            "neo4j": {
+              "n": 20,
+              "mean": 11.4,
+              "p50": 5.4,
+              "p95": 17.9,
+              "p99": 101.1
+            },
+            "mongodb": {
+              "n": 20,
+              "mean": 0.61,
+              "p50": 0.6,
+              "p95": 1.0,
+              "p99": 1.2
+            },
+            "qdrant": {
+              "n": 20,
+              "mean": 11.63,
+              "p50": 10.8,
+              "p95": 16.8,
+              "p99": 24.7
+            },
+            "redis": {
+              "n": 20,
+              "mean": 0.855,
+              "p50": 0.8,
+              "p95": 1.1,
+              "p99": 1.1
+            }
+          }
+        }
+      },
+      {
+        "scale": 100,
+        "load_seconds": {
+          "neo4j_s": 15.31,
+          "mongodb_s": 0.53,
+          "qdrant_s": 11.1,
+          "redis_s": 0.61
+        },
+        "nodes": 7512,
+        "relationships": 16695,
+        "reports": 1200,
+        "chunks": 2500,
+        "iocs": 1500,
+        "neo4j": {
+          "neighbourhood_1hop": {
+            "n": 30,
+            "mean": 2.821,
+            "p50": 2.78,
+            "p95": 3.202,
+            "p99": 3.218
+          },
+          "neighbourhood_2hop": {
+            "n": 30,
+            "mean": 4.566,
+            "p50": 4.235,
+            "p95": 6.553,
+            "p99": 6.807
+          },
+          "neighbourhood_3hop": {
+            "n": 30,
+            "mean": 10.62,
+            "p50": 10.536,
+            "p95": 18.144,
+            "p99": 19.446
+          },
+          "apt28_2hop_edges": 38,
+          "shared_infrastructure": {
+            "n": 30,
+            "mean": 1.391,
+            "p50": 0.964,
+            "p95": 2.056,
+            "p99": 11.747
+          },
+          "shortest_path": {
+            "n": 30,
+            "mean": 4.334,
+            "p50": 4.024,
+            "p95": 5.633,
+            "p99": 9.137
+          }
+        },
+        "mongodb": {
+          "list_by_actor": {
+            "n": 50,
+            "mean": 1.007,
+            "p50": 0.997,
+            "p95": 1.129,
+            "p99": 1.383
+          },
+          "get_by_id": {
+            "n": 200,
+            "mean": 0.461,
+            "p50": 0.446,
+            "p95": 0.669,
+            "p99": 0.809
+          },
+          "hydrate_10": {
+            "n": 50,
+            "mean": 0.597,
+            "p50": 0.563,
+            "p95": 0.854,
+            "p99": 0.869
+          }
+        },
+        "qdrant": {
+          "knn_k6_tlp_filter": {
+            "n": 60,
+            "mean": 3.479,
+            "p50": 3.42,
+            "p95": 3.931,
+            "p99": 4.937
+          }
+        },
+        "redis": {
+          "blocklist_get": {
+            "n": 1000,
+            "mean": 0.297,
+            "p50": 0.277,
+            "p95": 0.386,
+            "p99": 0.472
+          }
+        },
+        "graphrag_retrieve_only": {
+          "total": {
+            "n": 18,
+            "mean": 43.044,
+            "p50": 32.6,
+            "p95": 70.5,
+            "p99": 72.1
+          },
+          "channels": {
+            "linking": {
+              "n": 18,
+              "mean": 0.158,
+              "p50": 0.05,
+              "p95": 0.37,
+              "p99": 0.39
+            },
+            "qdrant": {
+              "n": 18,
+              "mean": 2.646,
+              "p50": 2.43,
+              "p95": 3.46,
+              "p99": 4.47
+            },
+            "neo4j": {
+              "n": 18,
+              "mean": 28.605,
+              "p50": 18.04,
+              "p95": 50.78,
+              "p99": 54.83
+            },
+            "mongodb": {
+              "n": 18,
+              "mean": 1.083,
+              "p50": 0.9,
+              "p95": 1.05,
+              "p99": 3.97
+            },
+            "redis": {
+              "n": 18,
+              "mean": 0.729,
+              "p50": 0.64,
+              "p95": 1.76,
+              "p99": 2.24
+            }
+          },
+          "max_evidence_edges": 60,
+          "max_documents": 10
+        },
+        "ingest": {
+          "per_report_ms": {
+            "n": 20,
+            "mean": 20.214,
+            "p50": 19.667,
+            "p95": 22.043,
+            "p99": 32.539
+          },
+          "reports_per_s": 49.5,
+          "steps_ms": {
+            "neo4j": {
+              "n": 20,
+              "mean": 5.125,
+              "p50": 4.7,
+              "p95": 6.2,
+              "p99": 8.8
+            },
+            "mongodb": {
+              "n": 20,
+              "mean": 0.51,
+              "p50": 0.5,
+              "p95": 0.6,
+              "p99": 1.2
+            },
+            "qdrant": {
+              "n": 20,
+              "mean": 8.825,
+              "p50": 8.6,
+              "p95": 9.2,
+              "p99": 14.7
+            },
+            "redis": {
+              "n": 20,
+              "mean": 0.775,
+              "p50": 0.8,
+              "p95": 0.9,
+              "p99": 1.0
+            }
+          }
+        }
+      },
+      {
+        "scale": 200,
+        "load_seconds": {
+          "neo4j_s": 27.25,
+          "mongodb_s": 1.04,
+          "qdrant_s": 24.97,
+          "redis_s": 1.21
+        },
+        "nodes": 15012,
+        "relationships": 33395,
+        "reports": 2400,
+        "chunks": 5000,
+        "iocs": 3000,
+        "neo4j": {
+          "neighbourhood_1hop": {
+            "n": 30,
+            "mean": 7.31,
+            "p50": 6.939,
+            "p95": 9.57,
+            "p99": 11.891
+          },
+          "neighbourhood_2hop": {
+            "n": 30,
+            "mean": 6.846,
+            "p50": 6.118,
+            "p95": 10.842,
+            "p99": 12.134
+          },
+          "neighbourhood_3hop": {
+            "n": 30,
+            "mean": 17.52,
+            "p50": 15.916,
+            "p95": 27.774,
+            "p99": 32.437
+          },
+          "apt28_2hop_edges": 45,
+          "shared_infrastructure": {
+            "n": 30,
+            "mean": 1.25,
+            "p50": 1.168,
+            "p95": 1.739,
+            "p99": 1.915
+          },
+          "shortest_path": {
+            "n": 30,
+            "mean": 8.533,
+            "p50": 7.701,
+            "p95": 16.378,
+            "p99": 16.584
+          }
+        },
+        "mongodb": {
+          "list_by_actor": {
+            "n": 50,
+            "mean": 0.959,
+            "p50": 0.943,
+            "p95": 1.149,
+            "p99": 1.256
+          },
+          "get_by_id": {
+            "n": 200,
+            "mean": 0.42,
+            "p50": 0.414,
+            "p95": 0.486,
+            "p99": 0.583
+          },
+          "hydrate_10": {
+            "n": 50,
+            "mean": 0.563,
+            "p50": 0.552,
+            "p95": 0.653,
+            "p99": 0.708
+          }
+        },
+        "qdrant": {
+          "knn_k6_tlp_filter": {
+            "n": 60,
+            "mean": 4.991,
+            "p50": 4.881,
+            "p95": 5.577,
+            "p99": 5.641
+          }
+        },
+        "redis": {
+          "blocklist_get": {
+            "n": 1000,
+            "mean": 0.269,
+            "p50": 0.26,
+            "p95": 0.359,
+            "p99": 0.416
+          }
+        },
+        "graphrag_retrieve_only": {
+          "total": {
+            "n": 18,
+            "mean": 91.139,
+            "p50": 65.4,
+            "p95": 184.7,
+            "p99": 213.4
+          },
+          "channels": {
+            "linking": {
+              "n": 18,
+              "mean": 0.311,
+              "p50": 0.06,
+              "p95": 0.79,
+              "p99": 0.81
+            },
+            "qdrant": {
+              "n": 18,
+              "mean": 4.7,
+              "p50": 3.98,
+              "p95": 6.24,
+              "p99": 10.51
+            },
+            "neo4j": {
+              "n": 18,
+              "mean": 63.196,
+              "p50": 39.45,
+              "p95": 133.76,
+              "p99": 149.42
+            },
+            "mongodb": {
+              "n": 18,
+              "mean": 1.491,
+              "p50": 1.2,
+              "p95": 2.93,
+              "p99": 3.57
+            },
+            "redis": {
+              "n": 18,
+              "mean": 0.791,
+              "p50": 0.67,
+              "p95": 1.23,
+              "p99": 3.77
+            }
+          },
+          "max_evidence_edges": 60,
+          "max_documents": 10
+        },
+        "ingest": {
+          "per_report_ms": {
+            "n": 20,
+            "mean": 31.676,
+            "p50": 22.79,
+            "p95": 34.783,
+            "p99": 182.298
+          },
+          "reports_per_s": 31.6,
+          "steps_ms": {
+            "neo4j": {
+              "n": 20,
+              "mean": 12.965,
+              "p50": 5.7,
+              "p95": 15.6,
+              "p99": 141.4
+            },
+            "mongodb": {
+              "n": 20,
+              "mean": 0.605,
+              "p50": 0.6,
+              "p95": 0.7,
+              "p99": 1.4
+            },
+            "qdrant": {
+              "n": 20,
+              "mean": 10.865,
+              "p50": 9.9,
+              "p95": 13.4,
+              "p99": 23.2
+            },
+            "redis": {
+              "n": 20,
+              "mean": 0.8,
+              "p50": 0.8,
+              "p95": 1.0,
+              "p99": 1.1
+            }
+          }
+        }
+      }
+    ],
+    "experiment_s": 123.4
+  },
+  "load": {
+    "enforce_check": [
+      {
+        "concurrency": 1,
+        "requests": 2000,
+        "throughput_rps": 518.0,
+        "n": 2000,
+        "mean": 1.908,
+        "p50": 1.776,
+        "p95": 2.975,
+        "p99": 4.283
+      },
+      {
+        "concurrency": 4,
+        "requests": 2000,
+        "throughput_rps": 1511.5,
+        "n": 2000,
+        "mean": 2.554,
+        "p50": 2.147,
+        "p95": 3.361,
+        "p99": 5.276
+      },
+      {
+        "concurrency": 16,
+        "requests": 2000,
+        "throughput_rps": 541.7,
+        "n": 2000,
+        "mean": 28.457,
+        "p50": 22.953,
+        "p95": 65.322,
+        "p99": 88.342
+      },
+      {
+        "concurrency": 64,
+        "requests": 2000,
+        "throughput_rps": 271.2,
+        "n": 2000,
+        "mean": 229.757,
+        "p50": 112.58,
+        "p95": 868.461,
+        "p99": 1587.105
+      }
+    ],
+    "graph_shared_infrastructure": [
+      {
+        "concurrency": 1,
+        "requests": 400,
+        "throughput_rps": 221.8,
+        "n": 400,
+        "mean": 4.486,
+        "p50": 4.176,
+        "p95": 6.302,
+        "p99": 8.019
+      },
+      {
+        "concurrency": 4,
+        "requests": 400,
+        "throughput_rps": 719.0,
+        "n": 400,
+        "mean": 5.475,
+        "p50": 4.989,
+        "p95": 7.566,
+        "p99": 11.551
+      },
+      {
+        "concurrency": 16,
+        "requests": 400,
+        "throughput_rps": 464.1,
+        "n": 400,
+        "mean": 33.326,
+        "p50": 22.441,
+        "p95": 83.031,
+        "p99": 165.214
+      },
+      {
+        "concurrency": 64,
+        "requests": 400,
+        "throughput_rps": 156.2,
+        "n": 400,
+        "mean": 373.392,
+        "p50": 201.304,
+        "p95": 1181.364,
+        "p99": 1621.008
+      }
+    ],
+    "graphrag_retrieve_only": [
+      {
+        "concurrency": 1,
+        "requests": 96,
+        "throughput_rps": 12.4,
+        "n": 96,
+        "mean": 80.702,
+        "p50": 73.415,
+        "p95": 109.506,
+        "p99": 120.721
+      },
+      {
+        "concurrency": 4,
+        "requests": 96,
+        "throughput_rps": 27.5,
+        "n": 96,
+        "mean": 144.495,
+        "p50": 140.5,
+        "p95": 201.507,
+        "p99": 231.434
+      },
+      {
+        "concurrency": 16,
+        "requests": 96,
+        "throughput_rps": 18.7,
+        "n": 96,
+        "mean": 839.431,
+        "p50": 690.819,
+        "p95": 1969.408,
+        "p99": 2123.852
+      },
+      {
+        "concurrency": 64,
+        "requests": 96,
+        "throughput_rps": 20.0,
+        "n": 96,
+        "mean": 2641.186,
+        "p50": 2853.045,
+        "p95": 3857.229,
+        "p99": 3935.899
+      }
+    ],
+    "experiment_s": 46.8
+  },
+  "redis": {
+    "rows": [
+      {
+        "keys": 1000,
+        "load_keys_per_s": 81139,
+        "get_hit": {
+          "n": 2000,
+          "mean": 0.254,
+          "p50": 0.205,
+          "p95": 0.339,
+          "p99": 1.671
+        },
+        "get_miss": {
+          "n": 500,
+          "mean": 0.264,
+          "p50": 0.205,
+          "p95": 0.54,
+          "p99": 1.448
+        },
+        "zcount_live": {
+          "n": 200,
+          "mean": 0.19,
+          "p50": 0.17,
+          "p95": 0.233,
+          "p99": 0.938
+        },
+        "full_scan_ms": 1.5,
+        "scanned": 1000,
+        "used_memory_mb": 1.7
+      },
+      {
+        "keys": 10000,
+        "load_keys_per_s": 109848,
+        "get_hit": {
+          "n": 2000,
+          "mean": 0.303,
+          "p50": 0.258,
+          "p95": 0.595,
+          "p99": 1.693
+        },
+        "get_miss": {
+          "n": 500,
+          "mean": 0.272,
+          "p50": 0.27,
+          "p95": 0.294,
+          "p99": 0.315
+        },
+        "zcount_live": {
+          "n": 200,
+          "mean": 0.247,
+          "p50": 0.246,
+          "p95": 0.269,
+          "p99": 0.304
+        },
+        "full_scan_ms": 12.7,
+        "scanned": 10000,
+        "used_memory_mb": 5.3
+      },
+      {
+        "keys": 100000,
+        "load_keys_per_s": 107860,
+        "get_hit": {
+          "n": 2000,
+          "mean": 0.28,
+          "p50": 0.261,
+          "p95": 0.429,
+          "p99": 0.54
+        },
+        "get_miss": {
+          "n": 500,
+          "mean": 0.274,
+          "p50": 0.257,
+          "p95": 0.316,
+          "p99": 0.46
+        },
+        "zcount_live": {
+          "n": 200,
+          "mean": 0.231,
+          "p50": 0.233,
+          "p95": 0.256,
+          "p99": 0.279
+        },
+        "full_scan_ms": 180.2,
+        "scanned": 100000,
+        "used_memory_mb": 39.9
+      },
+      {
+        "keys": 500000,
+        "load_keys_per_s": 100858,
+        "get_hit": {
+          "n": 2000,
+          "mean": 0.305,
+          "p50": 0.286,
+          "p95": 0.42,
+          "p99": 0.534
+        },
+        "get_miss": {
+          "n": 500,
+          "mean": 0.277,
+          "p50": 0.267,
+          "p95": 0.31,
+          "p99": 0.648
+        },
+        "zcount_live": {
+          "n": 200,
+          "mean": 0.249,
+          "p50": 0.247,
+          "p95": 0.273,
+          "p99": 0.296
+        },
+        "full_scan_ms": 1028.1,
+        "scanned": 500000,
+        "used_memory_mb": 191.6
+      }
+    ],
+    "experiment_s": 9.1
+  },
+  "mongo": {
+    "documents": 200000,
+    "insert_docs_per_s": 102719,
+    "no_index": {
+      "by_actor": {
+        "latency": {
+          "n": 30,
+          "mean": 9.958,
+          "p50": 9.962,
+          "p95": 11.683,
+          "p99": 12.506
+        },
+        "docs_examined": 37181,
+        "keys_examined": 0,
+        "returned": 100,
+        "server_ms": 13,
+        "plan": [
+          "LIMIT",
+          "PROJECTION_SIMPLE",
+          "COLLSCAN"
+        ]
+      },
+      "by_ioc": {
+        "latency": {
+          "n": 30,
+          "mean": 57.279,
+          "p50": 54.712,
+          "p95": 67.562,
+          "p99": 90.386
+        },
+        "docs_examined": 200000,
+        "keys_examined": 0,
+        "returned": 1,
+        "server_ms": 68,
+        "plan": [
+          "PROJECTION_SIMPLE",
+          "COLLSCAN"
+        ]
+      },
+      "tlp_recent_50": {
+        "latency": {
+          "n": 30,
+          "mean": 52.892,
+          "p50": 49.87,
+          "p95": 69.922,
+          "p99": 75.054
+        },
+        "docs_examined": 200000,
+        "keys_examined": 0,
+        "returned": 50,
+        "server_ms": 70,
+        "plan": [
+          "PROJECTION_SIMPLE",
+          "SORT",
+          "COLLSCAN"
+        ]
+      }
+    },
+    "index_build_s": 0.95,
+    "production_indexes": {
+      "by_actor": {
+        "latency": {
+          "n": 30,
+          "mean": 0.842,
+          "p50": 0.773,
+          "p95": 1.182,
+          "p99": 1.284
+        },
+        "docs_examined": 100,
+        "keys_examined": 100,
+        "returned": 100,
+        "server_ms": 1,
+        "plan": [
+          "LIMIT",
+          "PROJECTION_SIMPLE",
+          "FETCH",
+          "IXSCAN"
+        ]
+      },
+      "by_ioc": {
+        "latency": {
+          "n": 30,
+          "mean": 0.551,
+          "p50": 0.53,
+          "p95": 0.693,
+          "p99": 0.705
+        },
+        "docs_examined": 3,
+        "keys_examined": 3,
+        "returned": 3,
+        "server_ms": 2,
+        "plan": [
+          "PROJECTION_SIMPLE",
+          "FETCH",
+          "IXSCAN"
+        ]
+      },
+      "tlp_recent_50": {
+        "latency": {
+          "n": 30,
+          "mean": 0.558,
+          "p50": 0.533,
+          "p95": 0.758,
+          "p99": 0.821
+        },
+        "docs_examined": 69,
+        "keys_examined": 69,
+        "returned": 50,
+        "server_ms": 1,
+        "plan": [
+          "LIMIT",
+          "PROJECTION_SIMPLE",
+          "FETCH",
+          "IXSCAN"
+        ]
+      }
+    },
+    "compound_tlp_date": {
+      "tlp_recent_50": {
+        "latency": {
+          "n": 30,
+          "mean": 0.49,
+          "p50": 0.453,
+          "p95": 0.676,
+          "p99": 0.709
+        },
+        "docs_examined": 50,
+        "keys_examined": 51,
+        "returned": 50,
+        "server_ms": 1,
+        "plan": [
+          "LIMIT",
+          "PROJECTION_SIMPLE",
+          "FETCH",
+          "SORT_MERGE",
+          "IXSCAN",
+          "IXSCAN"
+        ]
+      }
+    },
+    "data_mb": 44.0,
+    "index_mb": {
+      "_id_": 2.05,
+      "actors_1": 3.26,
+      "iocs_1": 7.6,
+      "date_-1": 2.14,
+      "tlp_1": 0.99,
+      "tlp_1_date_-1": 2.31
+    },
+    "experiment_s": 7.3
+  },
+  "neo4j": {
+    "nodes": 100000,
+    "create_nodes_per_s": 130817,
+    "no_index": {
+      "latency": {
+        "n": 30,
+        "mean": 18.856,
+        "p50": 18.636,
+        "p95": 22.303,
+        "p99": 25.069
+      },
+      "db_hits": 200002,
+      "operators": [
+        "ProduceResults",
+        "Projection",
+        "Filter",
+        "NodeByLabelScan"
+      ]
+    },
+    "index_build_s": 0.33,
+    "range_index": {
+      "latency": {
+        "n": 300,
+        "mean": 0.995,
+        "p50": 0.658,
+        "p95": 1.858,
+        "p99": 2.901
+      },
+      "db_hits": 3,
+      "operators": [
+        "ProduceResults",
+        "Projection",
+        "NodeIndexSeek"
+      ]
+    },
+    "experiment_s": 2.7
+  },
+  "qdrant": {
+    "dim": 64,
+    "rows": [
+      {
+        "points": 10000,
+        "upload_points_per_s": 36624,
+        "index_build_s": 1.02,
+        "indexed_vectors": 10000,
+        "segments": 2,
+        "unfiltered": {
+          "exact": {
+            "n": 100,
+            "mean": 2.295,
+            "p50": 1.937,
+            "p95": 4.386,
+            "p99": 4.967
+          },
+          "hnsw_ef16": {
+            "n": 100,
+            "mean": 2.456,
+            "p50": 2.063,
+            "p95": 4.583,
+            "p99": 6.125,
+            "recall_at_10": 1.0
+          },
+          "hnsw_ef64": {
+            "n": 100,
+            "mean": 1.965,
+            "p50": 1.778,
+            "p95": 2.681,
+            "p99": 4.423,
+            "recall_at_10": 1.0
+          },
+          "hnsw_ef128": {
+            "n": 100,
+            "mean": 1.827,
+            "p50": 1.725,
+            "p95": 2.317,
+            "p99": 4.111,
+            "recall_at_10": 1.0
+          }
+        },
+        "tlp_filter": {
+          "exact": {
+            "n": 100,
+            "mean": 2.049,
+            "p50": 2.0,
+            "p95": 2.588,
+            "p99": 2.745
+          },
+          "hnsw_ef16": {
+            "n": 100,
+            "mean": 1.818,
+            "p50": 1.782,
+            "p95": 2.123,
+            "p99": 2.322,
+            "recall_at_10": 1.0
+          },
+          "hnsw_ef64": {
+            "n": 100,
+            "mean": 1.757,
+            "p50": 1.728,
+            "p95": 2.096,
+            "p99": 2.177,
+            "recall_at_10": 1.0
+          },
+          "hnsw_ef128": {
+            "n": 100,
+            "mean": 1.8,
+            "p50": 1.78,
+            "p95": 2.17,
+            "p99": 2.428,
+            "recall_at_10": 1.0
+          }
+        }
+      },
+      {
+        "points": 50000,
+        "upload_points_per_s": 34615,
+        "index_build_s": 3.06,
+        "indexed_vectors": 50000,
+        "segments": 2,
+        "unfiltered": {
+          "exact": {
+            "n": 100,
+            "mean": 3.332,
+            "p50": 2.99,
+            "p95": 5.508,
+            "p99": 6.745
+          },
+          "hnsw_ef16": {
+            "n": 100,
+            "mean": 2.649,
+            "p50": 2.312,
+            "p95": 5.097,
+            "p99": 6.625,
+            "recall_at_10": 0.946
+          },
+          "hnsw_ef64": {
+            "n": 100,
+            "mean": 2.742,
+            "p50": 2.528,
+            "p95": 4.758,
+            "p99": 6.208,
+            "recall_at_10": 1.0
+          },
+          "hnsw_ef128": {
+            "n": 100,
+            "mean": 2.345,
+            "p50": 2.066,
+            "p95": 4.265,
+            "p99": 4.483,
+            "recall_at_10": 1.0
+          }
+        },
+        "tlp_filter": {
+          "exact": {
+            "n": 100,
+            "mean": 4.132,
+            "p50": 3.854,
+            "p95": 5.345,
+            "p99": 7.582
+          },
+          "hnsw_ef16": {
+            "n": 100,
+            "mean": 3.609,
+            "p50": 3.576,
+            "p95": 4.02,
+            "p99": 4.237,
+            "recall_at_10": 1.0
+          },
+          "hnsw_ef64": {
+            "n": 100,
+            "mean": 5.018,
+            "p50": 5.045,
+            "p95": 6.204,
+            "p99": 8.263,
+            "recall_at_10": 1.0
+          },
+          "hnsw_ef128": {
+            "n": 100,
+            "mean": 4.439,
+            "p50": 4.086,
+            "p95": 6.328,
+            "p99": 7.911,
+            "recall_at_10": 1.0
+          }
+        }
+      },
+      {
+        "points": 100000,
+        "upload_points_per_s": 33324,
+        "index_build_s": 6.61,
+        "indexed_vectors": 100000,
+        "segments": 2,
+        "unfiltered": {
+          "exact": {
+            "n": 100,
+            "mean": 4.817,
+            "p50": 4.332,
+            "p95": 7.086,
+            "p99": 10.557
+          },
+          "hnsw_ef16": {
+            "n": 100,
+            "mean": 2.466,
+            "p50": 2.17,
+            "p95": 4.428,
+            "p99": 5.299,
+            "recall_at_10": 0.917
+          },
+          "hnsw_ef64": {
+            "n": 100,
+            "mean": 2.356,
+            "p50": 2.259,
+            "p95": 3.422,
+            "p99": 3.953,
+            "recall_at_10": 0.999
+          },
+          "hnsw_ef128": {
+            "n": 100,
+            "mean": 2.809,
+            "p50": 2.499,
+            "p95": 4.182,
+            "p99": 4.445,
+            "recall_at_10": 1.0
+          }
+        },
+        "tlp_filter": {
+          "exact": {
+            "n": 100,
+            "mean": 7.866,
+            "p50": 6.596,
+            "p95": 14.362,
+            "p99": 27.602
+          },
+          "hnsw_ef16": {
+            "n": 100,
+            "mean": 2.259,
+            "p50": 2.117,
+            "p95": 3.038,
+            "p99": 4.195,
+            "recall_at_10": 0.677
+          },
+          "hnsw_ef64": {
+            "n": 100,
+            "mean": 3.087,
+            "p50": 2.886,
+            "p95": 5.383,
+            "p99": 5.887,
+            "recall_at_10": 0.958
+          },
+          "hnsw_ef128": {
+            "n": 100,
+            "mean": 3.942,
+            "p50": 2.937,
+            "p95": 10.239,
+            "p99": 15.09,
+            "recall_at_10": 0.998
+          }
+        }
+      }
+    ],
+    "experiment_s": 21.8
+  }
+}
