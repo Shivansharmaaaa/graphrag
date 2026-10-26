@@ -11,6 +11,7 @@ from __future__ import annotations
 import threading
 import time
 from contextlib import contextmanager
+from urllib.parse import urlparse
 
 import httpx
 from neo4j import GraphDatabase
@@ -32,7 +33,23 @@ _qdrant_lock = threading.Lock()
 
 
 def _new_qdrant() -> QdrantClient:
+    if settings.qdrant_url:  # hosted cluster: HTTPS + API key
+        # Qdrant Cloud runs newer servers (1.20) than the pinned client; the REST calls used here
+        # (collections, upsert, filtered query, scroll, payload indexes) are stable across them
+        return QdrantClient(url=settings.qdrant_url, api_key=settings.qdrant_api_key or None, timeout=10,
+                            check_compatibility=False)
     return QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port, timeout=5)
+
+
+def host_of(store: str) -> str:
+    """Where a store lives (hostname only, never credentials) — shown on the health page."""
+    url = {"neo4j": settings.neo4j_uri, "mongodb": settings.mongo_uri, "redis": settings.redis_url,
+           "qdrant": settings.qdrant_url or f"http://{settings.qdrant_host}:{settings.qdrant_port}"}[store]
+    return urlparse(url).hostname or url
+
+
+def _remote(store: str) -> bool:
+    return host_of(store) not in ("localhost", "127.0.0.1", "neo4j", "mongo", "redis", "qdrant")
 
 
 def _qdrant() -> QdrantClient | None:
@@ -62,9 +79,11 @@ def connect() -> None:
         # "constraint already exists" etc. arrive as INFORMATION notices on every start
         notifications_min_severity="WARNING",
     )
-    mongo_client = MongoClient(settings.mongo_uri, serverSelectionTimeoutMS=4000)
+    # hosted databases sit across the internet: allow for the round trip and the TLS handshake
+    mongo_client = MongoClient(settings.mongo_uri, serverSelectionTimeoutMS=10000 if _remote("mongodb") else 4000)
+    wait = 5 if _remote("redis") else 2
     redis_client = Redis.from_url(
-        settings.redis_url, decode_responses=True, socket_timeout=2, socket_connect_timeout=2
+        settings.redis_url, decode_responses=True, socket_timeout=wait, socket_connect_timeout=wait
     )
     _qdrant_gen += 1
     try:
@@ -189,6 +208,10 @@ def health() -> dict:
         }
     except Exception:
         out["llm"]["detail"] = f"ollama unreachable at {settings.ollama_url} (retrieve-only mode)"
+    for store in ("neo4j", "mongodb", "redis", "qdrant"):
+        out[store]["host"] = host_of(store)
+        if out[store]["ok"]:
+            out[store]["detail"] += f" · {out[store]['host']}"
     return out
 
 

@@ -2,6 +2,8 @@
 
 This is how to show the examiner the databases themselves — running servers with real data, queried in their own tools — rather than the application or exported files. Allow about 5 minutes. Every query below was run against the demo data.
 
+**Running on the hosted services?** If the platform uses MongoDB Atlas, Neo4j AuraDB, Redis Cloud and Qdrant Cloud (`docs/cloud-setup.md`), run the same queries in each vendor's own console instead: AuraDB → **Query**, Atlas → **Browse Collections**, Redis Cloud → **Redis Insight**, Qdrant Cloud → cluster **Dashboard**. The app's **Operations** page shows each database's cloud hostname.
+
 ## 1. Start everything
 
 ```bash

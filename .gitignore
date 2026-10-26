@@ -15,3 +15,6 @@ _backup_original_code/
 
 # Review III document builds (contents page cache)
 review3/build/
+
+# hosted-database credentials
+.env.cloud

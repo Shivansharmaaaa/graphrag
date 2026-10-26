@@ -1,5 +1,5 @@
 # GraphRAG CTI Platform — local helpers
-.PHONY: infra down install api web seed eval eval-check bench test test-integration llm app dbui
+.PHONY: infra down install api web seed eval eval-check bench test test-integration llm app dbui cloud-check cloud-seed cloud-api
 
 infra:            ## start Neo4j, MongoDB, Redis, Qdrant
 	docker compose up -d
@@ -54,3 +54,17 @@ dbui:             ## open each NoSQL database in its own console (the stores mus
 	@echo "MongoDB  http://localhost:8081            (database cti)"
 	@echo "Redis    http://localhost:8082            (keys ioc:*)"
 	@echo "Qdrant   http://localhost:6333/dashboard  (collection threat_chunks)"
+
+# ---- hosted databases (MongoDB Atlas, Neo4j AuraDB, Redis Cloud, Qdrant Cloud) — docs/cloud-setup.md
+CLOUD = CTI_ENV_FILE=$(CURDIR)/.env.cloud DATA_DIR=$(CURDIR)/backend/data/cloud
+cloud-env:
+	@test -f .env.cloud || { echo "copy .env.cloud.example to .env.cloud and fill it in (docs/cloud-setup.md)"; exit 1; }
+
+cloud-check: cloud-env  ## test the four hosted databases in .env.cloud (read-only)
+	cd backend && $(CLOUD) ../.venv/bin/python -m scripts.cloud_check
+
+cloud-seed: cloud-env   ## load the corpus into the hosted databases (replaces what they contain)
+	cd backend && $(CLOUD) ../.venv/bin/python -m app.seed
+
+cloud-api: cloud-env    ## API on :8000 against the hosted databases (stop the cti-api container first); then make web
+	cd backend && $(CLOUD) ../.venv/bin/uvicorn app.main:app --port 8000

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -7,9 +8,11 @@ PROJECT_DIR = BACKEND_DIR.parent
 
 
 class Settings(BaseSettings):
-    # .env is looked up in the project root first, then the working directory
+    # .env is looked up in the project root first, then the working directory; CTI_ENV_FILE
+    # (e.g. .env.cloud for the hosted databases) is read last and overrides both
     model_config = SettingsConfigDict(
-        env_file=(str(PROJECT_DIR / ".env"), ".env"), extra="ignore"
+        env_file=(str(PROJECT_DIR / ".env"), ".env", *filter(None, [os.environ.get("CTI_ENV_FILE")])),
+        extra="ignore",
     )
 
     # --- four NoSQL stores -------------------------------------------------
@@ -21,6 +24,8 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     qdrant_host: str = "localhost"
     qdrant_port: int = 6333
+    qdrant_url: str = ""          # hosted Qdrant (https://…cloud.qdrant.io:6333); overrides host/port
+    qdrant_api_key: str = ""
     qdrant_collection: str = "threat_chunks"
 
     # --- locally hosted LLM (NFR1: no mandatory cloud API) -----------------
