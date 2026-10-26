@@ -1,5 +1,5 @@
 # GraphRAG CTI Platform — local helpers
-.PHONY: infra down install api web seed eval eval-check bench test test-integration llm app
+.PHONY: infra down install api web seed eval eval-check bench test test-integration llm app dbui
 
 infra:            ## start Neo4j, MongoDB, Redis, Qdrant
 	docker compose up -d
@@ -47,3 +47,10 @@ test-integration: ## API tests against the live stores (make infra first); clean
 
 app:              ## everything in containers
 	docker compose --profile app up -d --build
+
+dbui:             ## open each NoSQL database in its own console (the stores must be running)
+	docker compose --profile dbui up -d mongo-express redis-commander
+	@echo "Neo4j    http://localhost:7474            (user neo4j / ctiplatform)"
+	@echo "MongoDB  http://localhost:8081            (database cti)"
+	@echo "Redis    http://localhost:8082            (keys ioc:*)"
+	@echo "Qdrant   http://localhost:6333/dashboard  (collection threat_chunks)"

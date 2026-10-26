@@ -2,14 +2,16 @@
 
 | Deliverable | File | Built by |
 |---|---|---|
-| Final report (25 pages) | `Final_Report_GraphRAG_CTI_Platform.pdf` / `.docx` | `node generate_report.js` |
-| User manual (18 pages) | `User_Manual_GraphRAG_CTI_Platform.pdf` / `.docx` | `node generate_manual.js` |
-| Presentation (21 slides, speaker notes) | `Presentation_GraphRAG_CTI_Platform.pptx` / `.pdf` | `node generate_slides.js` |
+| Final report | `Final_Report_GraphRAG_CTI_Platform.pdf` / `.docx` | `node generate_report.js` |
+| User manual | `User_Manual_GraphRAG_CTI_Platform.pdf` / `.docx` | `node generate_manual.js` |
+| Presentation (with speaker notes) | `Presentation_GraphRAG_CTI_Platform.pptx` / `.pdf` | `node generate_slides.js` |
 | Demo runbook and viva preparation | `DEMO_RUNBOOK.md` | — |
+| Showing the four databases live | `DATABASE_TOUR.md` | `make dbui` (from the project root) |
 | Performance results | `performance/*.json` | `make bench`, `make eval` |
 | Diagrams | `figures/r3_*.png` | `python generate_figures.py` |
 | Charts | `figures/chart_*.png` | `python make_charts.py` |
 | Console screenshots | `screenshots/*.png` | `node capture_screenshots.js screenshots` |
+| Database console screenshots | `screenshots/db_*.png`, `figures/r3_db_consoles.png` | `node capture_db_consoles.js screenshots` (needs `make dbui`), then `python generate_figures.py` |
 
 Every measured number in the report, manual and slides is read from `performance/`, so the documents can be rebuilt after a new benchmark run.
 

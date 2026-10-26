@@ -68,7 +68,7 @@ const SECTIONS = [
 const tocPages = K.tocFrom(TOC_CACHE);
 
 // figure / table numbers resolve from these orders, so references in the text can never drift
-const FIG_ORDER = ["arch", "graph", "stores", "ingest", "answer", "console", "scaleStores", "scaleFix",
+const FIG_ORDER = ["arch", "graph", "stores", "ingest", "answer", "console", "dbConsoles", "scaleStores", "scaleFix",
   "ingestChart", "indexes", "redis", "qdrant", "load", "llm"];
 const TAB_ORDER = ["positioning", "roles", "indexes", "integrity", "code", "security", "nosql", "tests", "accept",
   "env", "slo", "corpus", "defects", "ablation", "hnsw", "trace", "gaps"];
@@ -242,6 +242,10 @@ C.push(p(`The console has eight pages: GraphRAG console, graph explorer, report 
 C.push(...fig("console", SHOT("graphrag_answer.png"), "GraphRAG console: cited answer, hub caution and the evidence panel (llama3.2:3b, 100% citation coverage)."));
 C.push(h2("6.6  Deployment and operations"));
 C.push(p(`\`docker compose up -d\` starts the four stores; the \`app\` profile adds the API and an nginx-served console, and the \`llm\` profile an Ollama container. On first start the API creates the schema and seeds an empty stack. The operations page shows store health, per-store latency percentiles against their SLOs and the integrity check. Dumps of all four stores and a restore script support reproducibility (NFR5), and GitHub Actions runs the test tiers against fresh service containers on every push.`));
+
+C.push(h2("6.7  The databases in their own consoles"));
+C.push(p(`Each store can also be inspected directly in its native tool, independently of the platform (Figure ${F("dbConsoles")}): Neo4j Browser runs Cypher against the live graph — \`CALL db.schema.visualization()\` draws the schema of 8 labels and 16 relationship patterns; mongo-express shows the \`cti\` database's six collections and each report with its own nested fields; Redis Commander shows every \`ioc:{type}:{value}\` key with its value and a TTL that counts down; and the Qdrant dashboard lists the 25 vector points of \`threat_chunks\` with their payloads and HNSW settings. \`make dbui\` starts the two consoles that are not built in, read-only and bound to the local machine; \`review3/DATABASE_TOUR.md\` gives the queries used in the demonstration.`));
+C.push(...fig("dbConsoles", FIG("r3_db_consoles.png"), "The four NoSQL databases in their own consoles: Neo4j Browser, mongo-express, Redis Commander and the Qdrant dashboard."));
 
 // ================================================================== 7 innovation
 C.push(h1(SECTIONS[6], { newPage: true }));

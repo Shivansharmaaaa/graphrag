@@ -367,7 +367,35 @@ def fig_ingest():
     c.save("r3_ingest.png")
 
 
+# ====================================================================== 6. database consoles
+def fig_db_consoles():
+    """2x2 composite of the four databases in their own consoles (needs capture_db_consoles.js)."""
+    shots = [("db_neo4j_shared_infra.png", "Neo4j Browser  ·  graph (Cypher)", NAVY),
+             ("db_mongo_document.png", "mongo-express  ·  MongoDB document", TEAL),
+             ("db_redis_key.png", "Redis Commander  ·  key with live TTL", RED),
+             ("db_qdrant_points.png", "Qdrant dashboard  ·  vector points + payload", PURPLE)]
+    src = Path(__file__).parent / "screenshots"
+    if not all((src / f).exists() for f, _, _ in shots):
+        print("skip r3_db_consoles.png (run capture_db_consoles.js first)")
+        return
+    cw, ch, gap, band = 1440, 900, 24, 64
+    im = Image.new("RGB", (2 * cw + 3 * gap, 2 * (ch + band) + 3 * gap), BG)
+    d = ImageDraw.Draw(im)
+    f = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 34)
+    for i, (name, title, col) in enumerate(shots):
+        x = gap + (i % 2) * (cw + gap)
+        y = gap + (i // 2) * (ch + band + gap)
+        d.rectangle((x, y, x + cw, y + band), fill=col)
+        d.text((x + 24, y + 14), title, font=f, fill=WHITE)
+        shot = Image.open(src / name).convert("RGB").resize((cw, ch), Image.LANCZOS)
+        im.paste(shot, (x, y + band))
+        d.rectangle((x, y, x + cw, y + band + ch), outline=col, width=4)
+    im.save(OUT / "r3_db_consoles.png", "PNG", optimize=True)
+    print("wrote", OUT / "r3_db_consoles.png")
+
+
 if __name__ == "__main__":
+    fig_db_consoles()
     fig_architecture()
     fig_answer_path()
     fig_graph_schema()

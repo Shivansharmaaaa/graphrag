@@ -11,7 +11,8 @@ const TOC_CACHE = path.join(__dirname, "build", "manual_toc.json");
 const SECTIONS = [
   "1.  About This Manual", "2.  System Overview", "3.  Installation", "4.  Signing In",
   "5.  Using the Console", "6.  Walkthroughs", "7.  Enforcement API for Security Tools",
-  "8.  Configuration Reference", "9.  Administration and Maintenance", "10.  Troubleshooting", "11.  Glossary",
+  "8.  Inspecting the Databases Directly", "9.  Configuration Reference", "10.  Administration and Maintenance",
+  "11.  Troubleshooting", "12.  Glossary",
 ];
 const toc = K.tocFrom(TOC_CACHE);
 let figN = 0;
@@ -49,6 +50,7 @@ C.push(table([2600, 7038], [
   ["a CTI lead or detection engineer", "also 5.4 (blocklist), 5.6 (ingest) and 7"],
   ["a platform operator", "Sections 3, 8, 9 and 10"],
   ["integrating a firewall, EDR or SIEM", "Section 7"],
+  ["showing the databases themselves", "Section 8"],
 ], { size: 20 }));
 C.push(spacer(100), p("**Conventions.** Commands are shown in a monospace box and run from the project folder (`nosql/`). Text in `monospace` is typed exactly. Screens are shown in the console's dark theme."));
 
@@ -212,6 +214,22 @@ C.push(table([2600, 7038], [
 
 // ================================================================== 8
 C.push(h1(SECTIONS[7], { newPage: true }));
+C.push(p("Each database can be opened in its own tool, independently of the CTI console — useful for checking data, teaching, and showing that the four stores are real database servers rather than files. Start the two extra consoles with `make dbui`; Neo4j and Qdrant include their own."));
+C.push(table([1700, 3700, 4238], [
+  ["Database", "Console", "What to look at"],
+  ["Neo4j", "http://localhost:7474 (user neo4j, password from NEO4J_PASSWORD)", "run Cypher; `CALL db.schema.visualization()` draws the live schema"],
+  ["MongoDB", "http://localhost:8081 (mongo-express), or MongoDB Compass at mongodb://localhost:27017", "database cti → reports; compare rpt-002 and rpt-004"],
+  ["Redis", "http://localhost:8082 (Redis Commander)", "ioc → ip → a key: JSON value and TTL"],
+  ["Qdrant", "http://localhost:6333/dashboard", "threat_chunks → Points, Info (HNSW), Visualize"],
+], { size: 18 }));
+C.push(spacer(80), p("The MongoDB and Redis consoles are read-only and listen only on this machine. For typing commands, use the database shells: `docker exec -it cti-neo4j cypher-shell -u neo4j -p ctiplatform`, `docker exec -it cti-mongo mongosh cti`, `docker exec -it cti-redis redis-cli`. A step-by-step tour with queries is in `review3/DATABASE_TOUR.md`."));
+C.push(...fig(SHOT("db_neo4j_shared_infra.png"), "Neo4j Browser: a Cypher query showing APT28 and Sandworm sharing a C2 server.", 560));
+C.push(...fig(SHOT("db_mongo_document.png"), "mongo-express: report rpt-002 with its report-specific nested build_pipeline field.", 560));
+C.push(...fig(SHOT("db_redis_key.png"), "Redis Commander: an IOC key with its JSON value and remaining TTL in seconds.", 560));
+C.push(...fig(SHOT("db_qdrant_points.png"), "Qdrant dashboard: a vector point of the threat_chunks collection with its payload.", 560));
+
+// ================================================================== 9
+C.push(h1(SECTIONS[8], { newPage: true }));
 C.push(p("Settings are read from `.env` in the project folder (copy `.env.example`). Environment variables override the file."));
 C.push(table([3000, 2400, 4238], [
   ["Setting", "Default", "Purpose"],
@@ -233,8 +251,8 @@ C.push(table([3000, 2400, 4238], [
   ["DATA_DIR", "backend/data", "fitted embedder and embedded-Qdrant files"],
 ], { size: 18 }));
 
-// ================================================================== 9
-C.push(h1(SECTIONS[8]));
+// ================================================================== 10
+C.push(h1(SECTIONS[9]));
 C.push(table([3300, 6338], [
   ["Task", "How"],
   ["Restore the demo data and fresh TTLs", "`make seed` or Operations → re-seed (removes ingested data)"],
@@ -249,7 +267,7 @@ C.push(table([3300, 6338], [
 ], { size: 19 }));
 
 // ================================================================== 10
-C.push(h1(SECTIONS[9]));
+C.push(h1(SECTIONS[10]));
 C.push(table([2900, 3200, 3538], [
   ["Symptom", "Likely cause", "Fix"],
   ["Console shows a red neo4j dot after start", "Neo4j needs ~30 s to start", "wait; check `docker compose ps` until healthy"],
@@ -265,7 +283,7 @@ C.push(table([2900, 3200, 3538], [
 ], { size: 18 }));
 
 // ================================================================== 11
-C.push(h1(SECTIONS[10]));
+C.push(h1(SECTIONS[11]));
 [["CTI", "cyber threat intelligence: knowledge about threat actors, their tools, infrastructure and behaviour"],
   ["IOC", "indicator of compromise: an IP, domain, URL or file hash associated with malicious activity"],
   ["TTL", "time to live: seconds until a blocklist entry expires"],

@@ -10,6 +10,7 @@ A 6–8 minute live demo of the CTI Workstation, what to say at each step, what 
 
 ```bash
 docker compose --profile app up -d --build     # stores + API + console on http://localhost:5173
+make dbui                                      # read-only consoles: MongoDB :8081, Redis :8082
 ollama pull llama3.2:3b                        # already pulled? this is a no-op
 make test && make test-integration             # 16 + 15 tests, ~10 s
 ```
@@ -31,6 +32,10 @@ curl -s localhost:11434/api/generate -d '{"model":"llama3.2:3b","keep_alive":"30
 ---
 
 ## 2. Demo script
+
+**Start with the databases themselves** (about 3 minutes, details and queries in [DATABASE_TOUR.md](DATABASE_TOUR.md)): Neo4j Browser at http://localhost:7474 (`CALL db.schema.visualization()`, then the APT28 shared-infrastructure query), mongo-express at http://localhost:8081 (cti → reports → rpt-002 and rpt-004), Redis Commander at http://localhost:8082 (ioc → ip → 185.86.77.12 and its TTL), and the Qdrant dashboard at http://localhost:6333/dashboard (threat_chunks → Points, Visualize). *"These are four real database servers; the application sits on top of them."*
+
+Then the application:
 
 | # | Time | Do | Expect | Say |
 |---|---|---|---|---|

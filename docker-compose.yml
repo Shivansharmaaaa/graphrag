@@ -2,6 +2,8 @@
 #   docker compose up -d                       -> Neo4j, MongoDB, Redis, Qdrant only (run API/UI locally)
 #   docker compose --profile app up -d --build -> + FastAPI + analyst console
 #   docker compose --profile llm up -d         -> + Ollama (local LLM, NFR1)
+#   docker compose --profile dbui up -d        -> + web consoles for MongoDB (:8081) and Redis (:8082)
+# Neo4j and Qdrant ship their own consoles: http://localhost:7474 and http://localhost:6333/dashboard
 services:
   neo4j:
     image: neo4j:5.26-community
@@ -52,6 +54,31 @@ services:
       timeout: 5s
       retries: 12
     volumes: [qdrant_data:/qdrant/storage]
+
+  # Browser consoles for the two stores without a built-in one. Read-only, and bound to
+  # localhost because they run without a login (lab use).
+  mongo-express:
+    image: mongo-express:1.0.2-20-alpine3.19
+    container_name: cti-mongo-express
+    profiles: ["dbui"]
+    ports: ["127.0.0.1:8081:8081"]
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://mongo:27017/
+      ME_CONFIG_BASICAUTH: "false"
+      ME_CONFIG_OPTIONS_READONLY: "true"   # browse and query only: no edit or delete buttons
+    depends_on:
+      mongo: {condition: service_healthy}
+
+  redis-commander:
+    image: ghcr.io/joeferner/redis-commander:0.9.1
+    container_name: cti-redis-commander
+    profiles: ["dbui"]
+    ports: ["127.0.0.1:8082:8081"]
+    environment:
+      REDIS_HOSTS: ioc-blocklist:redis:6379
+      READ_ONLY: "true"   # GET, TTL, KEYS work; writes and deletes are refused
+    depends_on:
+      redis: {condition: service_healthy}
 
   ollama:
     image: ollama/ollama:latest

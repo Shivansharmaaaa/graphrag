@@ -155,6 +155,21 @@ function bullets(s, items, x, y, w, h, size = 13) {
   image(s, FIG("r3_architecture.png"), 0.5, 1.3, 9, 3.9);
 }
 
+// ================================================================== 4b the databases themselves
+{
+  const s = content("The databases", "Four real database servers, each in its own console",
+    "Before the application, show the databases themselves. Top left, Neo4j Browser running Cypher on the live graph: APT28 and Sandworm share a server. Top right, mongo-express showing report rpt-002 with its own nested build_pipeline field. Bottom left, Redis Commander: an IOC key with its value and a TTL counting down. Bottom right, the Qdrant dashboard: a vector point with its payload. All four run as Docker containers from the official images; make dbui opens the two consoles that are not built in, and review3/DATABASE_TOUR.md has the queries.");
+  image(s, FIG("r3_db_consoles.png"), 0.5, 1.25, 6.3, 3.95);
+  card(s, 7.0, 1.35, 2.5, 3.75, NAVY, "Open them live", [
+    "Neo4j  :7474",
+    "MongoDB  :8081",
+    "Redis  :8082",
+    "Qdrant  :6333/dashboard",
+    "",
+    "make dbui starts the MongoDB and Redis consoles (read-only)",
+  ], { size: 11.5 });
+}
+
 // ================================================================== 5 data model
 {
   const s = content("Data model", "One graph, three join keys",

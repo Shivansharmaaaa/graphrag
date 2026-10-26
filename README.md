@@ -95,6 +95,8 @@ npm run dev                     # http://localhost:5173
 ollama pull llama3.2:3b          # default; meets the 15 s GraphRAG SLO (see §6 for llama3.1)
 ```
 
+**See the databases themselves:** `make dbui` starts read-only web consoles for MongoDB (http://localhost:8081) and Redis (http://localhost:8082); Neo4j Browser (http://localhost:7474, `neo4j` / `ctiplatform`) and the Qdrant dashboard (http://localhost:6333/dashboard) are built in. `review3/DATABASE_TOUR.md` lists what to open and which queries to run.
+
 If `make` is installed you can use the shortcuts instead: `make infra`, `make install`, `make api`, `make web`, `make seed`, `make test`, `make test-integration`, `make eval`.
 
 ### Tests
