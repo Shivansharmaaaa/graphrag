@@ -13,6 +13,8 @@ const R = PERF("benchmark_results.json");
 const B = PERF("benchmark_baseline_before_fixes.json");
 const E = PERF("eval_llama3.2-3b_default.json");
 const LL = PERF("llm_latency_runs.json");
+const CV = PERF("cloud_verification.json");
+const EC = PERF("eval_real_data_cloud.json");
 const rows = R.scale.rows;
 const r1 = rows[0];
 const rN = rows[rows.length - 1];
@@ -168,6 +170,56 @@ function bullets(s, items, x, y, w, h, size = 13) {
     "",
     "make dbui starts the MongoDB and Redis consoles (read-only)",
   ], { size: 11.5 });
+}
+
+
+// ================================================================== hosted databases + real data
+{
+  const s = content("Hosted · real data", "The same platform on four cloud databases",
+    `The databases now run on their vendors' own cloud services: Neo4j AuraDB, MongoDB Atlas, Redis Cloud and Qdrant Cloud, all free tiers. Only the databases are hosted; the API, console and LLM stay on the laptop. Operations shows each store's cloud hostname and contents. They hold real public threat intelligence: MITRE ATT&CK version ${CV.import.attack_version} — 178 groups, 842 malware families and tools, 227 techniques, 57 campaigns — plus botnet C2 servers from abuse.ch Feodo Tracker and compromised hosts from Emerging Threats. ATT&CK's APT28, Sandworm and the other corpus actors merged onto the existing nodes.`);
+  image(s, SHOT("cloud_operations.png"), 0.5, 1.28, 5.9, 3.9);
+  card(s, 6.6, 1.3, 2.9, 1.9, NAVY, "Hosted on", [
+    `AuraDB · Neo4j ${CV.services.neo4j.version.split(" ")[0]}`,
+    `Atlas · MongoDB ${CV.services.mongodb.version}`,
+    `Redis Cloud · Redis ${CV.services.redis.version}`,
+    `Qdrant Cloud · Qdrant ${CV.services.qdrant.version}`,
+  ], { size: 11 });
+  card(s, 6.6, 3.35, 2.9, 1.85, STORE.llm, "Real feeds loaded", [
+    `MITRE ATT&CK v${CV.import.attack_version}`,
+    "abuse.ch Feodo Tracker · Emerging Threats",
+    `${n0(CV.import.nodes)} nodes · ${n0(CV.import.relationships)} edges`,
+    `${CV.import.reports} reports · ${CV.import.chunks} chunks · ${CV.health.redis.detail.split(" ")[0]} live IOCs`,
+  ], { size: 11 });
+}
+
+{
+  const s = content("Hosted · real data", "GraphRAG answers from ATT&CK in the cloud",
+    `Asked against the hosted databases: which groups are behind ATT&CK's SolarWinds Compromise campaign, and what malware was used. The campaign C0024 merged onto our own SolarWinds node, so the answer cites APT29 and the ATT&CK software list — SUNBURST, GoldMax, SUNSPOT and others — with every sentence cited. Cobalt Strike and Mimikatz get the commodity-tool caution: ATT&CK records 32 and 51 groups using them. Across the six acceptance questions on the hosted stores, gold evidence recall is still 100 percent.`);
+  image(s, SHOT("cloud_graphrag_solarwinds.png"), 0.5, 1.28, 6.4, 3.95);
+  card(s, 7.1, 1.35, 2.4, 3.8, STORE.neo4j, "On the hosted stores", [
+    `gold edges ${EC.graphrag.gold_edge_recall * 100}% · gold reports ${EC.graphrag.gold_report_recall * 100}%`,
+    `citation coverage ${EC.graphrag.mean_citation_coverage.toFixed(2)}`,
+    `integrity: ${EC.integrity.counts.mongodb_reports} reports in all stores`,
+    `${CV.integration_tests_on_cloud.passed}/${CV.integration_tests_on_cloud.passed} integration tests pass`,
+    `latency includes the internet: GraphRAG p95 ${(EC.graphrag.p95_ms / 1000).toFixed(1)} s`,
+  ], { size: 11 });
+}
+
+{
+  const s = content("Security · IP gate", "A blocklisted IP cannot use the platform",
+    `Every API request is checked against the Redis blocklist. Here the client is ${CV.ip_gate.client}, a QakBot command-and-control server from abuse.ch: every route answers 403, only the health check stays open. Each refusal is logged in MongoDB Atlas with an expires_at time, and a TTL index deletes it after 7 days. We proved both expiries on the cloud: an IP published with a ${CV.ttl_proof.blocklist_ttl_s}-second TTL was admitted again after ${CV.ttl_proof.unblocked_after_s} seconds, and an expired log entry was removed by Atlas after ${CV.ttl_proof.expired_log_deleted_after_s} seconds. Below, the same key read directly from Redis Cloud with its TTL.`);
+  image(s, SHOT("cloud_blocked_requests.png"), 0.5, 1.3, 6.2, 1.55);
+  s.addText("The same key read straight from Redis Cloud (Redis Commander, read-only): value and TTL in seconds",
+    { x: 0.5, y: 3.05, w: 6.2, h: 0.28, margin: 0, fontFace: BODY, fontSize: 10.5, bold: true, color: STORE.redis });
+  image(s, SHOT("cloud_redis_cli.png"), 0.5, 3.35, 6.2, 1.8);
+  card(s, 6.9, 1.3, 2.6, 3.85, STORE.redis, "Verified on the cloud", [
+    `${CV.ip_gate.client} → HTTP ${CV.ip_gate.blocked_status}`,
+    `health check → ${CV.ip_gate.health_status}`,
+    "refusal log: TTL index expires_at_1 in Atlas",
+    `expired log entry deleted in ${CV.ttl_proof.expired_log_deleted_after_s} s`,
+    `${CV.ttl_proof.blocklist_ttl_s} s block → admitted after ${CV.ttl_proof.unblocked_after_s} s`,
+    "Redis down → gate fails open; /enforce fails closed",
+  ], { size: 11 });
 }
 
 // ================================================================== 5 data model
@@ -431,17 +483,18 @@ function bullets(s, items, x, y, w, h, size = 13) {
 // ================================================================== 20 limitations
 {
   const s = content("Limitations and next steps", "What we would do next",
-    "Be candid. Single-node stores and one API worker are deployment choices, not design limits. The corpus is small and the 200 times scaling is synthetic; a TAXII connector would bring real volume. The 3B model meets the SLO but writes terser answers; streaming would let the 8B model feel interactive. Neural embeddings are supported but not the default.");
+    "Be candid. Single-node stores and one API worker are deployment choices, not design limits. The real feeds are imported on demand rather than streamed, and the 200 times scaling is synthetic; a TAXII connector with scheduled refresh is next. On free cloud tiers in other regions, latency includes the internet. The 3B model meets the SLO but writes terser answers; streaming would let the 8B model feel interactive. Neural embeddings are supported but not the default.");
   card(s, 0.5, 1.4, 4.4, 3.1, MUTED, "Limitations", [
     "single-node stores; one API worker",
-    "12-report curated corpus; 200× scaling is synthetic",
+    "feeds are imported, not streamed; 200× scaling is synthetic",
+    "free-tier cloud adds internet latency",
     "3B model is terser than 8B",
     "TF-IDF embeddings by default",
     "lab secrets in .env.example",
   ], { size: 14 });
   card(s, 5.1, 1.4, 4.4, 3.1, STORE.llm, "Next steps", [
     "Uvicorn workers / replicas; Neo4j and Mongo clustering",
-    "TAXII feed connector for real volume",
+    "TAXII connector with scheduled refresh",
     "stream answers, gate on completion → 8B feels interactive",
     "nomic-embed-text as default embedder",
     "secrets from a vault; SSO for analysts",

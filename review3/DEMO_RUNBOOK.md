@@ -12,7 +12,7 @@ A 6–8 minute live demo of the CTI Workstation, what to say at each step, what 
 docker compose --profile app up -d --build     # stores + API + console on http://localhost:5173
 make dbui                                      # read-only consoles: MongoDB :8081, Redis :8082
 ollama pull llama3.2:3b                        # already pulled? this is a no-op
-make test && make test-integration             # 16 + 15 tests, ~10 s
+make test && make test-integration             # 18 + 16 tests, ~10 s
 ```
 
 - Close heavy applications; the Docker VM has 2 vCPUs shared by every engine.
@@ -27,7 +27,7 @@ curl -s localhost:11434/api/generate -d '{"model":"llama3.2:3b","keep_alive":"30
 ```
 
 - Sign in as **analyst**, ask one example question to warm every store, and check that all five sidebar dots are green.
-- Have the slide deck open at slide 19 ("Six minutes, four use cases").
+- Have the slide deck open at slide 23 ("Six minutes, four use cases").
 
 ---
 
@@ -52,6 +52,27 @@ Then the application:
 
 After the demo, run `make seed` again if you need a clean corpus (step 8 added a report).
 
+### Variant: hosted databases and real data
+
+To demonstrate on the vendors' cloud services with real threat intelligence (setup in `docs/cloud-setup.md`):
+
+```bash
+make cloud-check                                   # all four lines: OK … hosted
+make cloud-import-feeds                            # only if the feeds are older than a few days (TTLs 1–7 days)
+docker compose --profile app stop                  # free ports 8000 and 5173
+TRUST_FORWARDED_FOR=true make cloud-api            # terminal 1
+make web                                           # terminal 2
+```
+
+| Do | Expect | Say |
+|---|---|---|
+| **Operations** | four cloud hostnames; 2,118 nodes, 249 reports, ~515 live IOCs | "Same code, now on AuraDB, Atlas, Redis Cloud and Qdrant Cloud, holding MITRE ATT&CK and two live IP feeds." |
+| Ask *Which groups are attributed to the SolarWinds Compromise campaign and what malware was used?* | APT29, SUNBURST, GoldMax, SUNSPOT …, cited | "ATT&CK's campaign merged onto our own SolarWinds node, so graph and documents line up." |
+| Terminal: `curl -i -H 'X-Forwarded-For: 50.16.16.211' localhost:8000/api/reports` | `403 … is on the IOC blocklist` | "That address is a QakBot C2 server from abuse.ch. Any request from it is refused…" |
+| **IOC blocklist** → *Requests blocked by the API* | the refusal with its log-expiry time | "…and logged in Atlas with a TTL index, so the log cleans itself up after 7 days." |
+
+Allow for internet latency: GraphRAG takes 10–20 s on the free tiers. In Atlas, the current network's IP must be on the access list (Security → Network Access).
+
 ---
 
 ## 3. If something goes wrong
@@ -64,6 +85,7 @@ After the demo, run `make seed` again if you need a clean corpus (step 8 added a
 | A store dot is red | `docker compose ps`; `docker compose up -d <store>`; Neo4j takes ~30 s. Continue on another page meanwhile. |
 | Browser shows the login page unexpectedly | The 8-hour session expired or the API restarted; sign in again. |
 | Port 5173 / 8000 conflict | `docker compose --profile app stop` then `docker compose --profile app up -d`. |
+| `make cloud-check` fails for MongoDB with an SSL/TLS error | Atlas does not know this network: Atlas → Security → Network Access → Add current IP; or switch to the local stack. |
 | Everything is down | Present from the screenshots in `review3/screenshots/` and the slides; the report has the full results. |
 
 ---

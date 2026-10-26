@@ -1,0 +1,139 @@
+{
+  "date": "2026-10-27",
+  "services": {
+    "neo4j": {
+      "service": "Neo4j AuraDB Free",
+      "version": "5.27-aura (enterprise)"
+    },
+    "mongodb": {
+      "service": "MongoDB Atlas M0",
+      "version": "8.0.34"
+    },
+    "redis": {
+      "service": "Redis Cloud (free, 30 MB, 100 ops/s)",
+      "version": "8.6.2"
+    },
+    "qdrant": {
+      "service": "Qdrant Cloud (free, AWS eu-west-1)",
+      "version": "1.20.0"
+    }
+  },
+  "health": {
+    "neo4j": {
+      "host": "9cde3461.databases.neo4j.io",
+      "detail": "2118 nodes",
+      "latency_ms": 782.96
+    },
+    "mongodb": {
+      "host": "cluster0.47ee9jp.mongodb.net",
+      "detail": "249 reports",
+      "latency_ms": 168.27
+    },
+    "redis": {
+      "host": "trains-turquoiseish-inherent-33986.db.redis.io",
+      "detail": "515 live IOCs",
+      "latency_ms": 361.23
+    },
+    "qdrant": {
+      "host": "3f3fa6c2-665a-4270-be54-0398e20817cb.eu-west-1-0.aws.cloud.qdrant.io",
+      "detail": "server: threat_chunks (794 chunks)",
+      "latency_ms": 823.64
+    }
+  },
+  "import": {
+    "attack_version": "20.0",
+    "seconds": 303,
+    "nodes": 2118,
+    "relationships": 18478,
+    "reports": 249,
+    "chunks": 794,
+    "blocklist": {
+      "Emerging Threats compromised hosts": 482,
+      "abuse.ch Feodo Tracker": 21
+    }
+  },
+  "graphrag_real_data": [
+    {
+      "question": "Which botnet command-and-control servers host QakBot, and are they still on the blocklist?",
+      "mode": "llm",
+      "coverage": 0.778,
+      "latency_ms": 18004.7,
+      "edges": 60,
+      "docs": [
+        "rpt-001",
+        "rpt-010",
+        "feed-feodo",
+        "feed-et-compromised",
+        "attack-G1037",
+        "attack-G1046"
+      ]
+    },
+    {
+      "question": "Which groups are attributed to the SolarWinds Compromise campaign and what malware was used?",
+      "mode": "llm",
+      "coverage": 1.0,
+      "latency_ms": 8704.7,
+      "edges": 60,
+      "docs": [
+        "attack-C0024",
+        "attack-G0016",
+        "rpt-002"
+      ]
+    },
+    {
+      "question": "What does Sandworm Team use against electric power infrastructure?",
+      "mode": "llm",
+      "coverage": 1.0,
+      "latency_ms": 8935.1,
+      "edges": 60,
+      "docs": [
+        "rpt-001",
+        "attack-G0034",
+        "attack-C0025",
+        "attack-C0028",
+        "attack-C0034",
+        "rpt-003"
+      ]
+    },
+    {
+      "question": "Which threat actors share command-and-control infrastructure, and what malware was hosted there?",
+      "mode": "llm",
+      "coverage": 0.5,
+      "latency_ms": 10139.5,
+      "edges": 6,
+      "docs": [
+        "rpt-001",
+        "rpt-010",
+        "attack-C0004",
+        "attack-C0002",
+        "attack-C0061",
+        "attack-C0018"
+      ]
+    }
+  ],
+  "ip_gate": {
+    "client": "50.16.16.211",
+    "why": "abuse.ch Feodo Tracker QakBot C2, severity critical, TTL 7 days",
+    "clean_client_status": 401,
+    "blocked_status": 403,
+    "health_status": 200,
+    "atlas_ttl_index": {
+      "name": "expires_at_1",
+      "key": {
+        "expires_at": 1
+      },
+      "expireAfterSeconds": 0
+    },
+    "log_entry_expires_after_days": 7
+  },
+  "ttl_proof": {
+    "blocklist_ttl_s": 45,
+    "unblocked_after_s": 47,
+    "expired_log_deleted_after_s": 36
+  },
+  "integration_tests_on_cloud": {
+    "passed": 16,
+    "failed": 0,
+    "seconds": 47.2
+  }
+}

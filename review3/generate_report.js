@@ -17,6 +17,9 @@ const R = PERF("benchmark_results.json");
 const B = PERF("benchmark_baseline_before_fixes.json");
 const E = PERF("eval_llama3.2-3b_default.json");
 const LL = PERF("llm_latency_runs.json");
+const CV = PERF("cloud_verification.json");        // hosted databases: health, import, gate, TTL proof
+const EC = PERF("eval_real_data_cloud.json");     // evaluation on the hosted databases with the real feeds
+const EL = PERF("eval_real_data_local.json");     // the same on the local stack
 const ENV = R.environment;
 
 // ------------------------------------------------------------------ number helpers
@@ -68,9 +71,11 @@ const SECTIONS = [
 const tocPages = K.tocFrom(TOC_CACHE);
 
 // figure / table numbers resolve from these orders, so references in the text can never drift
-const FIG_ORDER = ["arch", "graph", "stores", "ingest", "answer", "console", "dbConsoles", "scaleStores", "scaleFix",
+const FIG_ORDER = ["arch", "graph", "stores", "ingest", "answer", "console", "dbConsoles", "cloudOps", "cloudAnswer",
+  "cloudGate", "cloudRedis", "scaleStores", "scaleFix",
   "ingestChart", "indexes", "redis", "qdrant", "load", "llm"];
-const TAB_ORDER = ["positioning", "roles", "indexes", "integrity", "code", "security", "nosql", "tests", "accept",
+const TAB_ORDER = ["positioning", "roles", "indexes", "integrity", "code", "security", "cloud", "feeds", "nosql", "tests",
+  "accept", "cloudVerify",
   "env", "slo", "corpus", "defects", "ablation", "hnsw", "trace", "gaps"];
 const F = (k) => { const i = FIG_ORDER.indexOf(k); if (i < 0) throw new Error(`figure ${k}`); return i + 1; };
 const T = (k) => { const i = TAB_ORDER.indexOf(k); if (i < 0) throw new Error(`table ${k}`); return i + 1; };
@@ -126,7 +131,7 @@ C.push(spacer(200), p(`**Figures** ${"(" + "diagrams and charts" + ")"} and **ta
 // ================================================================== 1 abstract
 C.push(h1(SECTIONS[0], { newPage: true }));
 C.push(p(`Cyber threat intelligence (CTI) is polyglot data. Relationships between threat actors, campaigns, malware and infrastructure form a graph; analyst reports are schema-variable documents; active indicators of compromise (IOCs) need millisecond lookups that expire on time; and analysts ask questions in natural language that need semantic recall. This project delivers a working CTI workstation that gives each workload its natural engine — Neo4j for the threat graph, MongoDB for reports, Redis for the IOC blocklist and Qdrant for report embeddings — and adds a GraphRAG layer that retrieves evidence from all four stores before a locally hosted LLM writes an answer in which every sentence must cite a graph edge, a passage, a report or an IOC state.`));
-C.push(p(`Review III completes and evaluates the system. The platform ingests STIX 2.1 bundles and free-text reports, enforces Traffic Light Protocol (TLP) clearance on every read path, serves a fail-closed enforcement API to firewalls and EDR tools, and records every answer for replay. On the six acceptance questions it recalls 100% of the required graph facts and source reports; with the default \`llama3.2:3b\` model the GraphRAG end-to-end p95 is **${llmFinal.p95_s} s** against a 15 s target (down from ${llmSept.p95_s} s in September). A new benchmark harness scales the corpus from 1× to 200× (${n0(rN.nodes)} nodes, ${n0(rN.reports)} reports) and ablates the indexes of each store. It exposed four scalability defects — linear entity linking, an unbounded traversal with unindexed node lookups, a whole-graph join on ingest and a thread-safety bug under concurrent load — whose fixes cut GraphRAG retrieval p95 at 200× from **${ms(rag(bN).total.p95)}** to **${ms(rag(rN).total.p95)}** and keep every store-level query within its service level.`));
+C.push(p(`Review III completes and evaluates the system. The platform ingests STIX 2.1 bundles and free-text reports, enforces Traffic Light Protocol (TLP) clearance on every read path, serves a fail-closed enforcement API to firewalls and EDR tools, and records every answer for replay. On the six acceptance questions it recalls 100% of the required graph facts and source reports; with the default \`llama3.2:3b\` model the GraphRAG end-to-end p95 is **${llmFinal.p95_s} s** against a 15 s target (down from ${llmSept.p95_s} s in September). A new benchmark harness scales the corpus from 1× to 200× (${n0(rN.nodes)} nodes, ${n0(rN.reports)} reports) and ablates the indexes of each store. It exposed four scalability defects — linear entity linking, an unbounded traversal with unindexed node lookups, a whole-graph join on ingest and a thread-safety bug under concurrent load — whose fixes cut GraphRAG retrieval p95 at 200× from **${ms(rag(bN).total.p95)}** to **${ms(rag(rN).total.p95)}** and keep every store-level query within its service level. Finally, the four databases were moved to their vendors' own cloud services — Neo4j AuraDB, MongoDB Atlas, Redis Cloud and Qdrant Cloud — and loaded with real public threat intelligence (MITRE ATT&CK v${CV.import.attack_version}, abuse.ch Feodo Tracker and Emerging Threats): ${n0(CV.import.nodes)} graph nodes, ${n0(CV.import.relationships)} relationships, ${CV.import.reports} reports and ${CV.health.redis.detail.split(" ")[0]} live blocked IPs. On the hosted databases all ${CV.integration_tests_on_cloud.passed} integration tests pass, GraphRAG still recalls 100% of the gold evidence, and an API request from a real botnet C2 address is refused and logged with an automatic expiry.`));
 C.push(p("**Keywords:** cyber threat intelligence, polyglot persistence, NoSQL, graph database, vector search, retrieval-augmented generation, GraphRAG, performance evaluation."));
 
 // ================================================================== 2 introduction
@@ -146,7 +151,8 @@ C.push(p(`Review I fixed the design and Review II delivered the first working bu
 [`a **prompt budget** and model choice that bring GraphRAG p95 from ${llmSept.p95_s} s to ${llmFinal.p95_s} s, meeting NFR2 on a laptop;`,
   "a **groundedness-gate fix** that stops valid citations written in variant forms from being discarded;",
   `a **benchmark harness** (\`make bench\`) for 1×–200× corpus scaling, index ablations, ANN recall and API load, which found **four scalability defects**, all fixed and re-measured;`,
-  `**${INT_TESTS} integration tests**, an evaluation gate and **continuous integration** that run the whole stack on every push.`]
+  `**${INT_TESTS} integration tests**, an evaluation gate and **continuous integration** that run the whole stack on every push;`,
+  "a **hosted deployment** on the four vendors' cloud services, loaded with **real public threat intelligence**, and an **IP gate** that refuses API requests from blocklisted addresses and logs each refusal with a TTL."]
   .forEach((t) => C.push(bullet(t)));
 
 // ================================================================== 3 background
@@ -233,8 +239,9 @@ C.push(table([3000, 6638], [
   ["Roles", "analyst (query), lead (+ publish/revoke IOCs, ingest), admin (+ seed, reindex, delete reports, all audit entries)"],
   ["TLP clearance", "WHITE < GREEN < AMBER < RED (CLEAR → WHITE, AMBER+STRICT → AMBER, unknown → AMBER); enforced on report lists, report detail (403), semantic search, GraphRAG context, answer labels and audit visibility"],
   ["Enforcement API", "separate API-key surface for firewalls, EDR and SIEM; reads Redis only; a miss is never resolved from MongoDB; Redis down → HTTP 503 with blocked: true (fail closed)"],
+  ["IP gate", "every API request from an address live on the Redis blocklist gets HTTP 403 (health checks excepted); each refusal is logged to MongoDB blocked_requests with expires_at, and a TTL index deletes it after 7 days; X-Forwarded-For is honoured only behind a trusted proxy; a Redis outage lets requests through (fail open) while /api/enforce/* stays fail closed"],
   ["Audit", "every answer stores its hops, chunks, documents and IOC states; replay re-verifies each against the live stores"],
-  ["Data residency", "local LLM through Ollama and local embeddings; no cloud API is called (NFR1)"],
+  ["Data residency", "local LLM through Ollama and local embeddings; no LLM or embedding API is called (NFR1). The databases may be local containers or the vendors' hosted services (Section 6.8)"],
 ], { size: 19 }));
 C.push(tab("security", "Security controls."));
 C.push(h2("6.5  Analyst console"));
@@ -244,8 +251,34 @@ C.push(h2("6.6  Deployment and operations"));
 C.push(p(`\`docker compose up -d\` starts the four stores; the \`app\` profile adds the API and an nginx-served console, and the \`llm\` profile an Ollama container. On first start the API creates the schema and seeds an empty stack. The operations page shows store health, per-store latency percentiles against their SLOs and the integrity check. Dumps of all four stores and a restore script support reproducibility (NFR5), and GitHub Actions runs the test tiers against fresh service containers on every push.`));
 
 C.push(h2("6.7  The databases in their own consoles"));
-C.push(p(`Each store can also be inspected directly in its native tool, independently of the platform (Figure ${F("dbConsoles")}): Neo4j Browser runs Cypher against the live graph — \`CALL db.schema.visualization()\` draws the schema of 8 labels and 16 relationship patterns; mongo-express shows the \`cti\` database's six collections and each report with its own nested fields; Redis Commander shows every \`ioc:{type}:{value}\` key with its value and a TTL that counts down; and the Qdrant dashboard lists the 25 vector points of \`threat_chunks\` with their payloads and HNSW settings. \`make dbui\` starts the two consoles that are not built in, read-only and bound to the local machine; \`review3/DATABASE_TOUR.md\` gives the queries used in the demonstration.`));
+C.push(p(`Each store can also be inspected directly in its native tool, independently of the platform (Figure ${F("dbConsoles")}, local stack with the seed corpus): Neo4j Browser runs Cypher against the live graph — \`CALL db.schema.visualization()\` draws the schema of 8 labels and 16 relationship patterns; mongo-express shows the \`cti\` database's six collections and each report with its own nested fields; Redis Commander shows every \`ioc:{type}:{value}\` key with its value and a TTL that counts down; and the Qdrant dashboard lists the 25 vector points of \`threat_chunks\` with their payloads and HNSW settings. \`make dbui\` starts the two consoles that are not built in, read-only and bound to the local machine; \`review3/DATABASE_TOUR.md\` gives the queries used in the demonstration.`));
 C.push(...fig("dbConsoles", FIG("r3_db_consoles.png"), "The four NoSQL databases in their own consoles: Neo4j Browser, mongo-express, Redis Commander and the Qdrant dashboard."));
+
+
+C.push(h2("6.8  Hosted deployment on the vendors' cloud services"));
+C.push(p(`The same code runs unchanged against each database vendor's own hosted service. \`.env.cloud\` (git-ignored) holds the four connection strings; \`make cloud-check\` connects read-only and prints each server's hostname and version, \`make cloud-seed\` and \`make cloud-import-feeds\` load the data, and \`make cloud-api\` serves the console from them. Only the databases are hosted: the API, the console and the LLM stay on the analyst's machine, and timeouts are longer for remote stores. Table ${T("cloud")} lists the deployment as verified on ${CV.date}; Figure ${F("cloudOps")} shows the Operations page reporting each hosted store.`));
+C.push(table([1500, 2500, 3400, 2238], [
+  ["Store", "Service and version", "Host", "Contents (ping)"],
+  ...["neo4j", "mongodb", "redis", "qdrant"].map((k) => [
+    { neo4j: "Neo4j", mongodb: "MongoDB", redis: "Redis", qdrant: "Qdrant" }[k],
+    `${CV.services[k].service}, ${CV.services[k].version}`,
+    CV.health[k].host.length > 40 ? CV.health[k].host.replace(/^([0-9a-f]{8})[0-9a-f-]+/, "$1…") : CV.health[k].host,
+    `${CV.health[k].detail} (${ms(CV.health[k].latency_ms)})`]),
+], { size: 18 }));
+C.push(tab("cloud", "The four hosted databases. All are free tiers; the project uses well under 1% of each quota."));
+C.push(...fig("cloudOps", SHOT("cloud_operations.png"), "Operations page with the API on the hosted databases: AuraDB, Atlas, Redis Cloud and Qdrant Cloud, their contents and per-store latency."));
+
+C.push(h2("6.9  Real threat intelligence"));
+C.push(p(`\`make import-feeds\` (\`backend/scripts/import_feeds.py\`) adds three public feeds that need no account (Table ${T("feeds")}). ATT&CK's STIX bundle is mapped onto the existing schema: intrusion sets become ThreatActor nodes, malware and tools Malware, techniques Technique (sub-techniques fold into their parent) and campaigns Campaign, with USES, EMPLOYS, IMPLEMENTS, USES_MALWARE and ATTRIBUTED_TO_CAMPAIGN edges. ATT&CK's APT28, APT29, Sandworm Team, Lazarus Group, FIN7, APT41, Scattered Spider and Kimsuky, and 13 malware families, merge onto the seed corpus's nodes by name and alias instead of duplicating them. Each group and campaign also becomes a MongoDB report written from ATT&CK's own descriptions, which is chunked into Qdrant. Feodo Tracker C2 servers become Infrastructure nodes that HOST their malware family, and every feed IP becomes an Indicator node and a Redis key whose TTL follows the feed's status (7 days for an online C2, 2–3 days for recent ones, 24 hours for compromised hosts). Writes are batched with UNWIND, and Redis writes are paced under the free plan's 100 operations per second. Names that are ordinary words ("Net", "Silence", "Wiper") are stored with \`linkable=false\`, so a question links to them only by ATT&CK id. Figure ${F("cloudAnswer")} shows a GraphRAG answer over the imported ATT&CK data.`));
+C.push(table([2600, 4400, 2638], [
+  ["Feed", "What is imported", "Size"],
+  [`MITRE ATT&CK Enterprise v${CV.import.attack_version} (STIX 2.1)`, "groups, malware and tools, techniques, campaigns and their relationships; one report per group and campaign", "178 groups, 842 software, 227 techniques, 57 campaigns, 16,678 relationships, 237 reports"],
+  ["abuse.ch Feodo Tracker", "botnet C2 IPs last online since 2025 (QakBot, Emotet), with port, AS, country and status", `${CV.import.blocklist["abuse.ch Feodo Tracker"]} C2 servers, one report`],
+  ["Emerging Threats compromised hosts", "IPs of hosts seen compromised and taking part in attacks", `${CV.import.blocklist["Emerging Threats compromised hosts"]} IPs, one report`],
+  ["Result in the stores", `Neo4j ${n0(CV.import.nodes)} nodes and ${n0(CV.import.relationships)} relationships; MongoDB ${CV.import.reports} reports; Qdrant ${CV.import.chunks} chunks; Redis ${CV.health.redis.detail.split(" ")[0]} live IOCs`, `import: ${Math.round(CV.import.seconds / 60)} min over the internet`],
+], { size: 18 }));
+C.push(tab("feeds", "Public feeds imported into all four stores."));
+C.push(...fig("cloudAnswer", SHOT("cloud_graphrag_solarwinds.png"), "GraphRAG on the hosted databases: ATT&CK's SolarWinds Compromise (C0024) resolves to APT29 and its malware, every sentence cited, with commodity-tool cautions."));
 
 // ================================================================== 7 innovation
 C.push(h1(SECTIONS[6], { newPage: true }));
@@ -290,6 +323,24 @@ C.push(table([3900, 1650, 1000, 1000, 1000, 1088], [
 ], { size: 18, center: [2, 3, 4, 5] }));
 C.push(tab("accept", `Acceptance results (${E.ts ? new Date(E.ts * 1000).toISOString().slice(0, 10) : ENV.date}, llama3.2:3b). Gold edge recall ${g.gold_edge_recall.toFixed(2)}, gold report recall ${g.gold_report_recall.toFixed(2)}, mean citation coverage ${g.mean_citation_coverage.toFixed(2)}.`));
 C.push(p("Every question retrieved all of its gold evidence and none was refused. In question 2 the model's draft fell below the coverage threshold and the gate replaced it with the deterministic evidence answer — the intended behaviour, not a failure. Question 6 carries the commodity-hub caution required by UC3. The same questions in retrieve-only mode, as run in CI, reach coverage 1.00 at about 50 ms per question."));
+
+
+C.push(h2("8.2  Verification on the hosted databases"));
+C.push(p(`The four checks below were run against AuraDB, Atlas, Redis Cloud and Qdrant Cloud after the real feeds were loaded (Table ${T("cloudVerify")}). Figure ${F("cloudGate")} shows the refusal log in the console and Figure ${F("cloudRedis")} the blocking key read directly from Redis Cloud.`));
+C.push(table([2500, 7138], [
+  ["Check", "Result"],
+  ["Connection to each database", `\`make cloud-check\`: all four reachable over TLS — ${["neo4j", "mongodb", "redis", "qdrant"].map((k) => `${CV.services[k].service.split(" (")[0]} ${CV.services[k].version.split(" ")[0]}`).join(", ")}`],
+  ["Data stored in each database", `cross-store integrity check passes on the hosted stores: ${EC.integrity.counts.mongodb_reports} MongoDB reports = ${EC.integrity.counts.report_nodes} Report nodes = ${EC.integrity.counts.qdrant_reports} reports with Qdrant chunks; ${EC.integrity.counts.redis_live} live Redis IOCs, each traceable to an Indicator node or a report`],
+  ["GraphRAG retrieves the data", `acceptance questions: gold edge recall ${EC.graphrag.gold_edge_recall.toFixed(2)}, gold report recall ${EC.graphrag.gold_report_recall.toFixed(2)}, citation coverage ${EC.graphrag.mean_citation_coverage.toFixed(2)}; real-data questions answered from ATT&CK and Feodo documents (${CV.graphrag_real_data.map((q) => q.docs.find((d) => d.startsWith("attack-") || d.startsWith("feed-"))).filter(Boolean).slice(0, 3).join(", ")})`],
+  ["Blocking by client IP", `request from ${CV.ip_gate.client} (${CV.ip_gate.why}) → HTTP ${CV.ip_gate.blocked_status} on every route, health check ${CV.ip_gate.health_status}; each refusal logged in Atlas with expires_at 7 days ahead`],
+  ["TTL on the refusal log", `Atlas index ${CV.ip_gate.atlas_ttl_index.name} with expireAfterSeconds 0; an already-expired entry was deleted by MongoDB's TTL monitor after ${CV.ttl_proof.expired_log_deleted_after_s} s`],
+  ["TTL on the block itself", `an IP published with a ${CV.ttl_proof.blocklist_ttl_s} s TTL was refused, then admitted again ${CV.ttl_proof.unblocked_after_s} s later when Redis expired the key`],
+  ["Integration tests", `${CV.integration_tests_on_cloud.passed}/${CV.integration_tests_on_cloud.passed + CV.integration_tests_on_cloud.failed} pass against the hosted stores (${CV.integration_tests_on_cloud.seconds.toFixed(0)} s)`],
+], { size: 18 }));
+C.push(tab("cloudVerify", `Verification on the hosted databases (${CV.date}).`));
+C.push(...fig("cloudGate", SHOT("cloud_blocked_requests.png"), "IOC blocklist page: API requests from the QakBot C2 address 50.16.16.211 refused, with the time each log entry expires.", 560));
+C.push(...fig("cloudRedis", SHOT("cloud_redis_cli.png"), "Redis Commander connected to Redis Cloud: blocklist keys of two Feodo Tracker QakBot C2 servers and their remaining TTL in seconds.", 640));
+C.push(p(`Correctness is unchanged, but latency now includes the internet: a Redis lookup takes ${ms(EC.latency.redis_get_p99_ms)} at p99 (local ${ms(EL.latency.redis_get_p99_ms)}) and GraphRAG ${(EC.graphrag.p95_ms / 1000).toFixed(1)} s at p95 (local ${(EL.graphrag.p95_ms / 1000).toFixed(1)} s), so the Redis and GraphRAG targets of NFR2, set for co-located stores, are not met on free tiers in other regions. Graph traversals stay within their 500 ms target (3-hop p95 ${ms(EC.latency.graph_3hop_p95_ms)}).`));
 
 // ================================================================== 9 performance
 C.push(h1(SECTIONS[8], { newPage: true }));
@@ -403,7 +454,7 @@ C.push(table([900, 2500, 4300, 1938], [
   ["FR10", "Replay and audit", "save_audit, replay", "integration: hops re-verified"],
   ["FR11", "AuthN and TLP", "security.py; TLP in every store query", "integration (junior)"],
   ["FR12", "Publish and revoke IOCs", "POST/DELETE /api/blocklist (lead)", "integration"],
-  ["NFR1", "Data residency", "local Ollama and embeddings", "no external calls"],
+  ["NFR1", "Data residency", "local Ollama and embeddings", "no LLM or embedding API calls"],
   ["NFR2", "Interactive latency", "prompt budget, indexes, fixes of 9.4", "Section 9"],
   ["NFR3", "Store isolation", "enforcement reads Redis only", "integration; 9.6"],
   ["NFR4", "Groundedness", "groundedness gate, refusal, fallback", `unit tests; Table ${T("accept")}`],
@@ -427,7 +478,8 @@ C.push(tab("gaps", "Review I gaps and how the final system closes them."));
 C.push(h1(SECTIONS[10]));
 ["**Single-node deployment.** All stores run as single instances; clustering Neo4j, MongoDB replica sets and Redis replication are configuration work, not design changes.",
   "**One API worker.** Section 9.8 shows the knee at four concurrent clients on two virtual CPUs; production would run several workers or replicas.",
-  "**Small, curated corpus.** Twelve public-knowledge reports cover every mechanism; the 200× scaling is synthetic. A TAXII feed connector would supply real volume.",
+  "**Corpus.** Twelve curated reports exercise every mechanism and the real feeds add ATT&CK and two IP feeds; the 200× scaling is synthetic. A TAXII connector with scheduled refresh would keep the feeds current without re-running the import.",
+  "**Hosted latency.** On free tiers in other regions, Redis and GraphRAG miss their co-located latency targets (Section 8.2). Paid tiers in the analyst's region, or the local stack, meet them.",
   "**Model quality versus latency.** `llama3.2:3b` meets the SLO but writes terser answers than `llama3.1:8b`; streaming the answer with the gate applied on completion would let the larger model feel interactive.",
   "**Embeddings.** The default TF-IDF + SVD model is deterministic and offline but weaker than neural embeddings; `nomic-embed-text` is supported and should become the default once download size is acceptable for the target environment.",
   "**Demo-grade secrets.** The JWT secret and consumer key in `.env.example` must be replaced outside a lab."].forEach((t) => C.push(bullet(t)));
@@ -495,13 +547,15 @@ C.push(codeBlock([
   "make test                           # unit tests",
   "make test-integration               # API against the live stores",
   "make eval-check                     # acceptance questions + gates  -> backend/eval_report.json",
+  "make import-feeds                   # real feeds: MITRE ATT&CK, abuse.ch Feodo Tracker, Emerging Threats",
+  "make cloud-check && make cloud-seed && make cloud-import-feeds && make cloud-api   # hosted databases",
   "docker compose --profile app stop   # pause the demo stack before benchmarking",
   "make bench                          # throwaway stack -> review3/performance/benchmark_results.json",
   "python review3/make_charts.py       # charts       (pip install matplotlib==3.9.2)",
   "python review3/generate_figures.py  # diagrams     (pip install pillow)",
   "node review3/generate_report.js     # this report  (npm install in review3/, LibreOffice for PDF)",
 ]));
-C.push(spacer(120), p(`The raw results are in \`review3/performance/\`: \`benchmark_results.json\` (after the fixes), \`benchmark_baseline_before_fixes.json\`, the three evaluation runs and \`llm_latency_runs.json\`, which records the provenance of every LLM measurement in Figure ${F("llm")}.`));
+C.push(spacer(120), p(`The raw results are in \`review3/performance/\`: \`benchmark_results.json\` (after the fixes), \`benchmark_baseline_before_fixes.json\`, the evaluation runs (including \`eval_real_data_local.json\` and \`eval_real_data_cloud.json\`), \`cloud_verification.json\` and \`llm_latency_runs.json\`, which records the provenance of every LLM measurement in Figure ${F("llm")}.`));
 
 // ================================================================== build
 K.publish(K.makeDocument({

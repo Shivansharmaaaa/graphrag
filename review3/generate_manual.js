@@ -111,7 +111,18 @@ C.push(h2("3.4  Local language model"));
 C.push(codeBlock(["ollama pull llama3.2:3b         # default model, meets the 15 s answer target", "ollama pull llama3.1             # optional: fuller answers, slower (set OLLAMA_MODEL=llama3.1)"]));
 C.push(p("The `llm` dot in the console sidebar turns green when Ollama is reachable and the configured model is pulled. In containers, the API reaches Ollama on the host through `host.docker.internal`; to run Ollama in a container instead, add `--profile llm` and set `OLLAMA_URL_DOCKER=http://ollama:11434` in `.env`."));
 C.push(h2("3.5  Check the installation"));
-C.push(codeBlock(["curl -s http://localhost:8000/api/health     # \"startup\": {\"ok\": true, \"detail\": \"ready\"}", "make test                                    # 16 unit tests, no databases needed", "make test-integration                        # 15 API tests against the running stores"]));
+C.push(codeBlock(["curl -s http://localhost:8000/api/health     # \"startup\": {\"ok\": true, \"detail\": \"ready\"}", "make test                                    # 18 unit tests, no databases needed", "make test-integration                        # 16 API tests against the running stores"]));
+C.push(h2("3.6  Real threat intelligence (optional)"));
+C.push(p("The seed corpus is small and curated. To add real, public threat intelligence on top of it, run:"));
+C.push(codeBlock(["make import-feeds                # MITRE ATT&CK, abuse.ch Feodo Tracker, Emerging Threats (a few minutes)", "                                 # then restart the API (stop make api, start it again)"]));
+C.push(p("This downloads MITRE ATT&CK Enterprise (178 groups, 842 malware families and tools, 227 techniques, 57 campaigns), the abuse.ch Feodo Tracker botnet C2 list and the Emerging Threats compromised-host list. ATT&CK groups that already exist in the corpus (APT28, Sandworm …) are merged, not duplicated. Every group and campaign gets a report in the Report browser, and the feed IPs go on the blocklist with a TTL of one to seven days. Run it again to refresh; run it again after `make seed`, which removes it."));
+C.push(h2("3.7  Hosted databases (optional)"));
+C.push(p("Instead of local containers, the four databases can run on their vendors' free cloud services: Neo4j AuraDB, MongoDB Atlas, Redis Cloud and Qdrant Cloud. `docs/cloud-setup.md` explains how to create each one. Put the connection details in `.env.cloud` (never commit it), then:"));
+C.push(codeBlock(["make cloud-check                 # connects read-only; every line must say OK … hosted",
+  "make cloud-seed                  # schema + seed corpus into the hosted databases",
+  "make cloud-import-feeds          # real threat intelligence (about 5 minutes)",
+  "make cloud-api                   # API on :8000 against the hosted databases; then make web"]));
+C.push(p("**Operations** then shows each store's cloud hostname. MongoDB Atlas only accepts computers whose IP address is on its access list: if `make cloud-check` reports an SSL or TLS error for MongoDB, add your current IP under Atlas → Security → Network Access."));
 
 // ================================================================== 4
 C.push(h1(SECTIONS[3]));
@@ -152,6 +163,8 @@ C.push(...fig(SHOT("report_detail.png"), "Report detail, including fields specif
 C.push(h2("5.4  IOC blocklist"));
 C.push(p("The hot set lists live indicators with severity, actor or campaign, publisher and a ticking TTL. When a TTL reaches zero the indicator moves to **Recently expired**: it is no longer enforced, but **show historical graph presence** proves the graph still records it. **O(1) lookup** checks a single value the way a firewall would."));
 C.push(...fig(SHOT("blocklist.png"), "IOC blocklist with live TTLs.", 560));
+C.push(p("**Requests blocked by the API.** Any request to the platform's API from an IP address that is live on this blocklist is refused with HTTP 403 — the address is treated as hostile. Each refusal appears in this card with its time, source IP, request and the blocklist key that matched. The log is kept in MongoDB and deleted automatically after 7 days (a TTL index); the block itself ends when the blocklist entry's TTL runs out or it is revoked."));
+C.push(...fig(SHOT("cloud_blocked_requests.png"), "Requests from the QakBot C2 address 50.16.16.211 (abuse.ch Feodo Tracker) refused by the API.", 560));
 C.push(p("**Publishing (lead or admin).** Fill in type (ip, domain, hash, url), value, TTL in seconds (up to 90 days), severity and optionally actor and campaign, then press **SET … EX**. **revoke** removes an entry immediately. Neither action changes the historical graph."));
 C.push(h2("5.5  Semantic search"));
 C.push(p("Finds passages that mean something similar to your text, not just matching words. Filter by actor ids, TLP levels and a date range; results show the score, report, TLP and passage, plus a similarity map. Use it for questions like “what else looks like this lure?”; use the graph explorer for “who is connected to whom?”."));
@@ -184,10 +197,16 @@ C.push(h2("6.4  Indicator expiry (UC4)"));
 C.push(...steps("w4", ["Re-seed (`make seed`), then open the **IOC blocklist** within a minute.",
   "Three seeded IOCs have 90 s, 120 s and 300 s TTLs; watch them count down and move to **Recently expired**.",
   "Click **show historical graph presence**: the graph still records the indicator although it is no longer enforced."]));
-C.push(h2("6.5  TLP filtering"));
+C.push(h2("6.5  Block a client IP"));
+C.push(p("This shows that an address on the blocklist cannot use the platform. Because every request on your own computer comes from 127.0.0.1, the test sends the client address in an `X-Forwarded-For` header, which the API trusts only when started with `TRUST_FORWARDED_FOR=true` (as it would be behind a reverse proxy)."));
+C.push(...steps("w7", ["Start the API with `TRUST_FORWARDED_FOR=true make api` (or `make cloud-api`) and run `make import-feeds` so the feed IPs are on the blocklist.",
+  "Run `curl -i -H 'X-Forwarded-For: 50.16.16.211' http://localhost:8000/api/reports` — the answer is 403 “50.16.16.211 is on the IOC blocklist”. The same request from another address gets 401 (sign-in required) instead.",
+  "Open **IOC blocklist**: the refusal is listed under **Requests blocked by the API** with the time its log entry expires.",
+  "As a lead, publish a test address (for example 203.0.113.99) with a 60 s TTL: it is refused within 5 seconds, and accepted again once the TTL runs out."]));
+C.push(h2("6.6  TLP filtering"));
 C.push(...steps("w5", ["Sign out and sign in as **junior** (GREEN).", "The report browser hides AMBER reports and shows how many are hidden.",
   "Open `/reports/rpt-001`: the report is withheld. Ask the UC1 question again: AMBER reports are not used and the answer is labelled GREEN or lower."]));
-C.push(h2("6.6  Ingest a STIX bundle"));
+C.push(h2("6.7  Ingest a STIX bundle"));
 C.push(...steps("w6", ["Sign in as **lead**, open **Ingest → STIX 2.1 bundle** and choose `samples/stix_apt28_bundle.json`.",
   "Tick **publish indicators** and press **Run ingest job**; all four steps turn green.",
   "Ask “diplomatic invitation lures against foreign ministries”: the new report (Embassy Lure 2024) is retrieved."]));
@@ -223,10 +242,12 @@ C.push(table([1700, 3700, 4238], [
   ["Qdrant", "http://localhost:6333/dashboard", "threat_chunks → Points, Info (HNSW), Visualize"],
 ], { size: 18 }));
 C.push(spacer(80), p("The MongoDB and Redis consoles are read-only and listen only on this machine. For typing commands, use the database shells: `docker exec -it cti-neo4j cypher-shell -u neo4j -p ctiplatform`, `docker exec -it cti-mongo mongosh cti`, `docker exec -it cti-redis redis-cli`. A step-by-step tour with queries is in `review3/DATABASE_TOUR.md`."));
+C.push(p("**Hosted databases.** With the hosted setup (Section 3.7), each vendor's web console shows the same data: AuraDB's **Query** tab runs Cypher, Atlas's **Data Explorer** browses the `cti` collections, Redis Cloud opens **Redis Insight**, and Qdrant Cloud's cluster **Dashboard** shows `threat_chunks`. Redis Commander can also be pointed at Redis Cloud (Figure 16)."));
 C.push(...fig(SHOT("db_neo4j_shared_infra.png"), "Neo4j Browser: a Cypher query showing APT28 and Sandworm sharing a C2 server.", 560));
 C.push(...fig(SHOT("db_mongo_document.png"), "mongo-express: report rpt-002 with its report-specific nested build_pipeline field.", 560));
 C.push(...fig(SHOT("db_redis_key.png"), "Redis Commander: an IOC key with its JSON value and remaining TTL in seconds.", 560));
 C.push(...fig(SHOT("db_qdrant_points.png"), "Qdrant dashboard: a vector point of the threat_chunks collection with its payload.", 560));
+C.push(...fig(SHOT("cloud_redis_cli.png"), "Redis Commander connected to Redis Cloud: blocklist keys of two Feodo Tracker C2 servers and their remaining TTL in seconds.", 600));
 
 // ================================================================== 9
 C.push(h1(SECTIONS[8], { newPage: true }));
@@ -237,6 +258,11 @@ C.push(table([3000, 2400, 4238], [
   ["MONGO_URI / MONGO_DB", "mongodb://localhost:27017, cti", "document store"],
   ["REDIS_URL", "redis://localhost:6379/0", "blocklist"],
   ["QDRANT_HOST / QDRANT_PORT", "localhost, 6333", "vector store (embedded fallback if unreachable)"],
+  ["QDRANT_URL / QDRANT_API_KEY", "(empty)", "hosted Qdrant cluster; overrides host and port"],
+  ["CTI_ENV_FILE", "(unset)", "extra settings file read last, e.g. .env.cloud for the hosted databases"],
+  ["ENFORCE_CLIENT_IP", "true", "refuse API requests from IPs live on the blocklist"],
+  ["TRUST_FORWARDED_FOR", "false", "take the client IP from X-Forwarded-For (only behind a trusted proxy)"],
+  ["BLOCKED_LOG_TTL_S", "604800", "how long refused requests stay in the log (seconds)"],
   ["OLLAMA_URL / OLLAMA_MODEL", "http://localhost:11434, llama3.2:3b", "local language model"],
   ["LLM_TIMEOUT_S", "60", "give up on the model after this many seconds (retrieve-only answer)"],
   ["EMBEDDER / OLLAMA_EMBED_MODEL", "tfidf, nomic-embed-text", "offline TF-IDF embeddings, or a neural model via Ollama"],
@@ -256,6 +282,8 @@ C.push(h1(SECTIONS[9]));
 C.push(table([3300, 6338], [
   ["Task", "How"],
   ["Restore the demo data and fresh TTLs", "`make seed` or Operations → re-seed (removes ingested data)"],
+  ["Load or refresh real threat intelligence", "`make import-feeds` (hosted: `make cloud-import-feeds`), then restart the API"],
+  ["Check the hosted databases", "`make cloud-check` (read-only)"],
   ["Rebuild the vector index", "Operations → rebuild vector index, or POST /api/admin/reindex (needed after changing EMBEDDER)"],
   ["Restore the snapshots", "`./scripts/restore_databases.sh dumps` (seed mode: `… seed`)"],
   ["Run the tests", "`make test`; with the stores running, `make test-integration`"],
@@ -278,6 +306,9 @@ C.push(table([2900, 3200, 3538], [
   ["Port 8000 or 5173 in use", "both the containerised and local app are running", "`docker compose --profile app stop`, or stop `make api` / `make web`"],
   ["403 when opening a report", "report TLP above your clearance", "sign in with a higher clearance"],
   ["Enforcement API returns 503", "Redis is down — the API fails closed", "restart Redis (`docker compose up -d redis`)"],
+  ["Every request returns 403 “… is on the IOC blocklist”", "your address (or the X-Forwarded-For value) is on the blocklist", "revoke it on the IOC blocklist page from another address, or wait for its TTL"],
+  ["make cloud-check: MongoDB SSL/TLS handshake failed", "this computer's IP is not on the Atlas access list", "Atlas → Security → Network Access → Add current IP"],
+  ["Hosted setup is slow", "each store is a round trip over the internet", "expected on free tiers; pick regions near you, or use the local stack for timing"],
   ["Semantic search returns nothing", "vector collection missing", "Operations → rebuild vector index"],
   ["Storage folder … already accessed", "two processes using embedded Qdrant", "start the Qdrant container, or run a single API process"],
 ], { size: 18 }));
@@ -298,5 +329,5 @@ C.push(h1(SECTIONS[11]));
 
 K.publish(K.makeDocument({
   children: C, headerLeft: "GraphRAG CTI Platform  ·  User Manual", headerRight: "Version 1.0",
-  footerLeft: "Review–III deliverable", numbered: ["w1", "w2", "w3", "w4", "w5", "w6"],
+  footerLeft: "Review–III deliverable", numbered: ["w1", "w2", "w3", "w4", "w5", "w6", "w7"],
 }), OUT, SECTIONS, TOC_CACHE, __filename);
