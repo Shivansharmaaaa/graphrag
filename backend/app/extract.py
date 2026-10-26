@@ -65,6 +65,8 @@ def invalidate_gazetteer() -> None:
 
 def _surface_forms(row: dict) -> list[str]:
     forms = [row.get("name"), row.get("value"), *row.get("aliases", [])]
+    if row.get("linkable") is False:  # an ordinary word as a name ("Net", "Silence"): link by id only
+        forms = []
     if row["label"] in ("ThreatActor", "Malware", "Technique", "Campaign"):
         forms.append(row["id"])
     return [f for f in forms if f and len(f) >= 3]

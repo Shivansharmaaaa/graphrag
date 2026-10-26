@@ -75,7 +75,7 @@ def connect() -> None:
     neo4j_driver = GraphDatabase.driver(
         settings.neo4j_uri,
         auth=(settings.neo4j_user, settings.neo4j_password),
-        connection_timeout=5,
+        connection_timeout=15 if _remote("neo4j") else 5,  # AuraDB: TLS + routing over the internet
         # "constraint already exists" etc. arrive as INFORMATION notices on every start
         notifications_min_severity="WARNING",
     )
@@ -132,6 +132,9 @@ def ensure_schema() -> None:
                 print(f"[schema] skipped: {stmt[:60]}… ({str(e)[:80]})")
     db = mongo_db()
     # Section 8.2 — indexes: _id (implicit), actors, date, tlp. No unique constraint on nested keys.
+    # refused requests expire on their own: one TTL index on the per-record expiry time
+    db.blocked_requests.create_index([("expires_at", ASCENDING)], expireAfterSeconds=0)
+    db.blocked_requests.create_index([("ts", DESCENDING)])
     db.reports.create_index([("actors", ASCENDING)])
     db.reports.create_index([("date", DESCENDING)])
     db.reports.create_index([("tlp", ASCENDING)])

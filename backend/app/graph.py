@@ -118,7 +118,8 @@ def gazetteer() -> list[dict]:
         MATCH (n) WHERE n:ThreatActor OR n:Campaign OR n:Malware OR n:Technique
                      OR n:Infrastructure OR n:Victim OR n:Indicator
         RETURN n.id AS id, labels(n)[0] AS label, n.name AS name,
-               coalesce(n.aliases, []) AS aliases, n.value AS value
+               coalesce(n.aliases, []) AS aliases, n.value AS value,
+               coalesce(n.linkable, true) AS linkable
         """)
     return [dict(r) for r in recs]
 

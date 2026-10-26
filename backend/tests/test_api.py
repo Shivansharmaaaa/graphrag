@@ -202,3 +202,22 @@ def test_free_text_ingest_fans_out_and_delete_cascades(client, auth, created):
     created["reports"].remove(rid)
     assert client.get(f"/api/reports/{rid}", headers=auth("admin")).status_code == 404
     assert client.get("/api/admin/integrity", headers=auth("analyst")).json()["ok"]
+
+
+# ---------------------------------------------------------------- IP gate: the API blocks listed IPs (FR3)
+def test_api_refuses_blocklisted_client_ip_and_logs_with_ttl(client, auth, monkeypatch):
+    from app import stores
+    monkeypatch.setattr(settings, "trust_forwarded_for", True)
+    as_ip = {**auth("lead"), "X-Forwarded-For": TEST_IP}
+    assert client.get("/api/reports", headers=as_ip).status_code == 200      # not listed yet
+    client.post("/api/blocklist", headers=auth("lead"), json={"type": "ip", "value": TEST_IP, "ttl": 120})
+    r = client.get("/api/reports", headers=as_ip)
+    assert r.status_code == 403 and r.json()["blocked"] and 0 < r.json()["ttl_remaining"] <= 120
+    assert client.get("/api/health", headers=as_ip).status_code == 200       # monitoring stays open
+    log = stores.mongo_db().blocked_requests.find_one({"ip": TEST_IP}, sort=[("ts", -1)])
+    assert log["path"] == "/api/reports" and log["expires_at"] > log["ts"]   # the log entry has a TTL
+    ttl_index = [i for i in stores.mongo_db().blocked_requests.list_indexes() if "expireAfterSeconds" in i]
+    assert ttl_index and ttl_index[0]["key"] == {"expires_at": 1}
+    client.delete(f"/api/blocklist/ip/{TEST_IP}", headers=auth("lead"))
+    assert client.get("/api/reports", headers=as_ip).status_code == 200      # revoked: allowed again
+    stores.mongo_db().blocked_requests.delete_many({"ip": TEST_IP})

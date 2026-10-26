@@ -6,10 +6,11 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Literal
 
-from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
+from starlette.concurrency import run_in_threadpool
 
 from app import (blocklist, documents, graph, graphrag, ingest, integrity, metrics, seed,
                  stores, vectors)
@@ -51,6 +52,36 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title="GraphRAG CTI Platform", version="1.0.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins.split(","),
                    allow_methods=["*"], allow_headers=["*"], allow_credentials=True)
+
+
+def client_ip(request: Request) -> str:
+    if settings.trust_forwarded_for and request.headers.get("x-forwarded-for"):
+        return request.headers["x-forwarded-for"].split(",")[0].strip()
+    return request.client.host if request.client else ""
+
+
+@app.middleware("http")
+async def ip_gate(request: Request, call_next):
+    """Refuse every API request from an IP that is live on the Redis blocklist (403). The block
+    lifts by itself when the key's TTL runs out. /api/health stays open for monitoring."""
+    if not settings.enforce_client_ip or request.url.path == "/api/health":
+        return await call_next(request)
+    ip = client_ip(request)
+    try:
+        entry = await run_in_threadpool(blocklist.blocked_client, ip)
+    except Exception:  # Redis down: the analyst read path degrades instead of locking everyone out
+        log.warning("ip gate: blocklist unavailable, request from %s allowed", ip)
+        return await call_next(request)
+    if not entry:
+        return await call_next(request)
+    try:
+        await run_in_threadpool(blocklist.log_blocked, ip, entry, request.method, request.url.path,
+                                settings.blocked_log_ttl_s)
+    except Exception:
+        log.exception("ip gate: could not log blocked request from %s", ip)
+    return JSONResponse(status_code=403, content={
+        "detail": f"{ip} is on the IOC blocklist", "blocked": True,
+        "ttl_remaining": entry["ttl_remaining"], "severity": entry.get("severity")})
 
 
 def _bad(e: Exception, code: int = 400):
@@ -188,6 +219,12 @@ def blocklist_list(user: dict = Depends(current_user)):
         _bad(e, 503)
 
 
+@app.get("/api/blocklist/blocked-requests")
+def blocklist_blocked_requests(user: dict = Depends(current_user)):
+    """Requests the API refused because their source IP was on the blocklist (TTL-limited log)."""
+    return blocklist.blocked_requests()
+
+
 @app.get("/api/blocklist/{ioc_type}/{value:path}")
 def blocklist_get(ioc_type: str, value: str, user: dict = Depends(current_user)):
     try:
@@ -201,8 +238,10 @@ def blocklist_get(ioc_type: str, value: str, user: dict = Depends(current_user))
 @app.post("/api/blocklist")
 def blocklist_publish(body: PublishIn, user: dict = Depends(require_role("lead"))):
     try:
-        return blocklist.publish(body.type, body.value, body.ttl, body.severity, body.actor,
-                                 body.campaign, published_by=user["username"])
+        res = blocklist.publish(body.type, body.value, body.ttl, body.severity, body.actor,
+                                body.campaign, published_by=user["username"])
+        blocklist.clear_gate_cache()  # the IP gate applies a new block immediately
+        return res
     except ValueError as e:
         _bad(e)
 
@@ -210,7 +249,9 @@ def blocklist_publish(body: PublishIn, user: dict = Depends(require_role("lead")
 @app.delete("/api/blocklist/{ioc_type}/{value:path}")
 def blocklist_revoke(ioc_type: str, value: str, user: dict = Depends(require_role("lead"))):
     try:
-        return {"revoked": blocklist.revoke(ioc_type, value)}
+        revoked = blocklist.revoke(ioc_type, value)
+        blocklist.clear_gate_cache()
+        return {"revoked": revoked}
     except ValueError as e:
         _bad(e)
 

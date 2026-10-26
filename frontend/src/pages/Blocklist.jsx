@@ -24,15 +24,18 @@ export default function Blocklist() {
   const [look, setLook] = useState({ type: "ip", value: "185.86.77.12" });
   const [lookRes, setLookRes] = useState(null);
   const [hist, setHist] = useState(null);
+  const [refused, setRefused] = useState([]);
 
-  const load = () =>
-    api("/blocklist")
+  const load = () => {
+    api("/blocklist/blocked-requests").then(setRefused).catch(() => {});
+    return api("/blocklist")
       .then((d) => {
         setData(d);
         setAt(Date.now());
         setErr(null);
       })
       .catch(setErr);
+  };
 
   useEffect(() => {
     load();
@@ -73,6 +76,7 @@ export default function Blocklist() {
       </p>
       <ErrorBox error={err} />
       <div className="split wide-left">
+        <div className="stack">
         <div className="card">
           <h3>Hot set {data && <span className="muted small">({data.live.length} live · refreshed every 5 s)</span>}</h3>
           <table className="tbl">
@@ -126,6 +130,44 @@ export default function Blocklist() {
               </ul>
             </>
           )}
+        </div>
+          <div className="card">
+            <h3>Requests blocked by the API ({refused.length})</h3>
+            <div className="muted small">
+              Every API request from an IP that is live on this blocklist gets HTTP 403. Each refusal is logged in
+              MongoDB (<span className="mono">blocked_requests</span>) and deleted automatically by a TTL index.
+            </div>
+            {refused.length === 0 ? (
+              <div className="muted small">No blocked requests in the log.</div>
+            ) : (
+              <table className="tbl small">
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>Source IP</th>
+                    <th>Request</th>
+                    <th>Blocked by</th>
+                    <th>Log expires</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {refused.slice(0, 20).map((r, i) => (
+                    <tr key={i}>
+                      <td>{new Date(r.ts).toLocaleTimeString()}</td>
+                      <td className="mono">{r.ip}</td>
+                      <td className="mono">
+                        {r.method} {r.path}
+                      </td>
+                      <td>
+                        <span className="mono">{r.ioc_key}</span> · {r.severity}
+                      </td>
+                      <td>{new Date(r.expires_at).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
         <div className="stack">
           <form className="card" onSubmit={lookup}>

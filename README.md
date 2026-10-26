@@ -45,6 +45,7 @@ nosql/
 │   │   ├── metrics.py          # per-store latency + SLOs (FR9, NFR2)
 │   │   ├── seed.py             # initial corpus loader (FR8)
 │   │   └── data.py             # public-knowledge corpus: actors, campaigns, malware, reports, IOCs
+│   ├── scripts/import_feeds.py # real public intel: MITRE ATT&CK, abuse.ch Feodo Tracker, Emerging Threats
 │   ├── scripts/evaluate.py     # gold paths, latency SLOs, citation coverage, freshness, integrity
 │   ├── scripts/benchmark.py    # scalability 1×–200×, load, index ablations, HNSW recall (`make bench`)
 │   ├── pytest.ini              # `integration` marker (deselected by default)
@@ -95,7 +96,9 @@ npm run dev                     # http://localhost:5173
 ollama pull llama3.2:3b          # default; meets the 15 s GraphRAG SLO (see §6 for llama3.1)
 ```
 
-**Hosted databases:** to run on MongoDB Atlas, Neo4j AuraDB, Redis Cloud and Qdrant Cloud instead of local containers, follow `docs/cloud-setup.md` (`.env.cloud`, then `make cloud-check`, `make cloud-seed`, `make cloud-api`).
+**Hosted databases:** to run on MongoDB Atlas, Neo4j AuraDB, Redis Cloud and Qdrant Cloud instead of local containers, follow `docs/cloud-setup.md` (`.env.cloud`, then `make cloud-check`, `make cloud-seed`, `make cloud-import-feeds`, `make cloud-api`).
+
+**Real threat intelligence:** `make import-feeds` (or `make cloud-import-feeds`) adds MITRE ATT&CK Enterprise (178 groups, 842 malware families and tools, 227 techniques, 57 campaigns and their relationships, one report per group and campaign), abuse.ch Feodo Tracker botnet C2 IPs and the Emerging Threats compromised-host list on top of the corpus. Restart the API afterwards so it loads the refitted embedder.
 
 **See the databases themselves:** `make dbui` starts read-only web consoles for MongoDB (http://localhost:8081) and Redis (http://localhost:8082); Neo4j Browser (http://localhost:7474, `neo4j` / `ctiplatform`) and the Qdrant dashboard (http://localhost:6333/dashboard) are built in. `review3/DATABASE_TOUR.md` lists what to open and which queries to run.
 
@@ -193,6 +196,8 @@ curl -H "X-API-Key: edr-consumer-key" "http://localhost:8000/api/enforce/export?
 
 * **Embeddings:** the default is a 64-d TF-IDF + truncated-SVD dense embedding. It is fully offline, deterministic and small enough for a laptop. Set `EMBEDDER=ollama` (after `ollama pull nomic-embed-text`) to use a neural local model, then run *Operations → Rebuild vector index*.
 * **Qdrant payload:** `tlp` and `date_ts` are added to the Section 8.4 payload so that FR4's TLP and date filters are native payload filters.
+* **IP gate:** every API request from an address on the blocklist is refused with 403 (health checks excepted) and logged to MongoDB `blocked_requests`, whose TTL index deletes each record after `BLOCKED_LOG_TTL_S` (7 days). Behind a reverse proxy set `TRUST_FORWARDED_FOR=true` so the client address comes from `X-Forwarded-For`. A Redis outage lets requests through (the gate fails open); `/api/enforce/*` still fails closed.
+* **Generic names:** ATT&CK names that are ordinary words ("Net", "Silence", "Wiper") are stored with `linkable=false`, so questions link to them only by ATT&CK id.
 * **Seed TTLs:** operational TTLs are hours to days. Three IOCs are intentionally short-lived so UC4 can be demonstrated live. Re-seed to restore them.
 * **Indicator nodes:** network IOCs are linked `Infrastructure -[:OBSERVED_AS]-> Indicator` by value, and file hashes `Malware -[:HAS_IOC]-> Indicator`.
 * **Users, audit log and ingest log** live in MongoDB. There is no fifth catch-all database.

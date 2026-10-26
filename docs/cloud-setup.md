@@ -78,6 +78,22 @@ make cloud-seed
 
 This creates the schema (constraints and indexes) and loads the corpus into all four hosted databases: 87 graph nodes and 162 relationships, 12 reports, 25 vectors and 15 blocklist entries. It replaces whatever those databases contain, and takes about a minute over the internet.
 
+### Add real threat intelligence
+
+```bash
+make cloud-import-feeds
+```
+
+This downloads three public feeds, none of which needs an account, and adds them on top of the corpus:
+
+| Feed | What it adds |
+|---|---|
+| **MITRE ATT&CK Enterprise** (STIX 2.1, github.com/mitre-attack/attack-stix-data) | 178 threat groups, 842 malware families and tools, 227 techniques and 57 campaigns, about 16,700 relationships, and one report per group and campaign written from ATT&CK's own descriptions. ATT&CK's APT28, APT29, Sandworm Team, Lazarus Group, FIN7, APT41, Scattered Spider and Kimsuky merge onto the corpus's own nodes. |
+| **abuse.ch Feodo Tracker** (feodotracker.abuse.ch) | Botnet command-and-control IPs (QakBot, Emotet …) seen since 2025: Infrastructure nodes that HOST their malware family, and blocklist entries (TTL 2–7 days, by status). |
+| **Emerging Threats compromised hosts** (rules.emergingthreats.net) | About 480 compromised-host IPs on the blocklist for 24 hours, each with an Indicator node. |
+
+Afterwards the graph holds about 2,100 nodes and 18,500 relationships, MongoDB 249 reports, Qdrant about 800 chunks and Redis about 500 live IOCs. The import takes a few minutes over the internet; Redis writes are paced to stay under the free plan's 100 operations a second. Run it again to refresh the feeds (they are cached for a day under `backend/data/feeds`). `make cloud-seed` replaces everything, so run the import again after it.
+
 ## 4. Run the console against the hosted databases
 
 ```bash
@@ -106,5 +122,5 @@ The queries in `review3/DATABASE_TOUR.md` work unchanged in these consoles.
 ## 6. Before a demo
 
 - Free tiers pause or remove idle databases (an AuraDB Free instance pauses after a few days without use). The day before, open each console, resume anything paused, and run `make cloud-check`.
-- If anything was removed, run `make cloud-seed` again. It also restores the short-lived blocklist entries used for the expiry demonstration.
+- If anything was removed, run `make cloud-seed` and then `make cloud-import-feeds` again. The seed also restores the short-lived blocklist entries used for the expiry demonstration, and the import refreshes the feed IPs, whose TTLs run out after one to seven days.
 - If you are demonstrating on a different network, add its IP in Atlas **Network Access**.

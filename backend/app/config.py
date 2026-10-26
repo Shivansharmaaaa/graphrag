@@ -63,6 +63,12 @@ class Settings(BaseSettings):
     llm_keep_alive: str = "30m"        # keep the model resident between questions
 
     auto_seed: bool = True
+
+    # --- IP enforcement on the API itself: requests from an IP that is live on the Redis
+    # blocklist get 403, and each refusal is logged in MongoDB with its own TTL
+    enforce_client_ip: bool = True
+    trust_forwarded_for: bool = False   # true behind a proxy that sets X-Forwarded-For (nginx)
+    blocked_log_ttl_s: int = 7 * 86400
     # fitted embedder + embedded-Qdrant fallback; point elsewhere to isolate a second stack
     data_dir: Path = BACKEND_DIR / "data"
 

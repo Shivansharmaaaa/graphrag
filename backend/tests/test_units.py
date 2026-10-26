@@ -49,6 +49,31 @@ def test_entity_linking_by_alias():
     assert ids == {"apt28", "mimikatz"}
 
 
+def test_generic_names_link_only_by_id():
+    """An ATT&CK tool called "Net" must not link on the ".net" of a domain."""
+    extract._gaz_cache.update(at=9e18, rows=[
+        {"id": "S0039", "label": "Malware", "name": "Net", "aliases": [], "value": None, "linkable": False},
+        {"id": "apt28", "label": "ThreatActor", "name": "APT28", "aliases": [], "value": None},
+    ])
+    assert {e["id"] for e in extract.link_entities("APT28 used microsoft-update-check.net")} == {"apt28"}
+    assert {e["id"] for e in extract.link_entities("What does S0039 do?")} == {"S0039"}
+
+
+def test_feed_parsing_and_attack_text_cleanup():
+    from scripts import import_feeds as f
+    assert f.clean("[APT28](https://attack.mitre.org/groups/G0007) used it.(Citation: X 2020)") == "APT28 used it."
+    assert f.weak("Net") and f.weak("cmd") and not f.weak("Mimikatz") and not f.weak("certutil")
+    feodo = json.dumps([{"ip_address": "50.16.16.211", "port": 443, "status": "online", "malware": "QakBot",
+                         "first_seen": "2025-12-30 13:56:31", "last_online": "2026-03-12"}]).encode()
+    agg = (b'# header\n"first_seen_utc","dst_ip","dst_port","c2_status","last_online","malware"\n'
+           b'"2021-01-17 07:30:05","67.213.75.205","443","offline","2021-09-08","Dridex"\n'
+           b'"2025-06-01 00:00:00","198.51.100.7","8080","offline","2025-07-01","Emotet"\n')
+    rows = {e["ip"]: e for e in f.parse_ip_feeds(feodo, agg, b"# list\n203.0.113.5\nnot-an-ip\n")}
+    assert set(rows) == {"50.16.16.211", "198.51.100.7", "203.0.113.5"}  # 2021 entry is too old
+    assert rows["50.16.16.211"]["severity"] == "critical" and rows["50.16.16.211"]["ttl"] == 7 * 86400
+    assert rows["203.0.113.5"]["ttl"] == 86400
+
+
 def _reference_link(text: str) -> list[dict]:
     """The original linker (one regex per gazetteer form): the indexed one must agree with it."""
     import re

@@ -109,6 +109,48 @@ def lookup(ioc_type: str, value: str) -> dict:
     return {"key": k, **json.loads(raw), "blocked": True, "ttl_remaining": int(ttl)}
 
 
+# ------------------------------------------------------------------ API gate (blocks client IPs)
+_gate_cache: dict[str, tuple[float, dict | None]] = {}
+GATE_CACHE_S = 5  # a publish or revoke reaches the gate within 5 s; saves a Redis trip per request
+
+
+def clear_gate_cache() -> None:
+    _gate_cache.clear()
+
+
+def blocked_client(ip: str) -> dict | None:
+    """The blocklist entry if `ip` is live on the blocklist, else None. Non-IP clients never match.
+    Raises on Redis failure so the caller decides how to degrade."""
+    now = time.time()
+    hit = _gate_cache.get(ip)
+    if hit and hit[0] > now:
+        return hit[1]
+    try:
+        res = lookup("ip", ip)
+    except ValueError:  # "testclient", unix sockets, …
+        res = {"blocked": False}
+    entry = res if res["blocked"] else None
+    _gate_cache[ip] = (now + GATE_CACHE_S, entry)
+    return entry
+
+
+def log_blocked(ip: str, entry: dict, method: str, path: str, ttl_s: int) -> None:
+    """Record a refused request; MongoDB's TTL index deletes the record after `ttl_s`."""
+    import datetime as dt
+    now = dt.datetime.now(dt.timezone.utc)
+    stores.mongo_db().blocked_requests.insert_one({
+        "ts": now, "expires_at": now + dt.timedelta(seconds=ttl_s), "ip": ip, "method": method,
+        "path": path, "ioc_key": entry["key"], "severity": entry.get("severity"),
+        "actor": entry.get("actor"), "campaign": entry.get("campaign"),
+        "block_ttl_remaining": entry["ttl_remaining"],
+    })
+
+
+def blocked_requests(limit: int = 100) -> list[dict]:
+    rows = stores.mongo_db().blocked_requests.find({}, {"_id": 0}).sort("ts", -1).limit(limit)
+    return [{**r, "ts": r["ts"].isoformat(), "expires_at": r["expires_at"].isoformat()} for r in rows]
+
+
 def lookup_many(values: list[str]) -> list[dict]:
     """Batch state lookup for GraphRAG (type inferred). Never touches MongoDB."""
     keys = []

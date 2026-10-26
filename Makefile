@@ -1,5 +1,5 @@
 # GraphRAG CTI Platform — local helpers
-.PHONY: infra down install api web seed eval eval-check bench test test-integration llm app dbui cloud-check cloud-seed cloud-api
+.PHONY: infra down install api web seed eval eval-check bench test test-integration llm app dbui cloud-check cloud-seed cloud-api import-feeds cloud-import-feeds
 
 infra:            ## start Neo4j, MongoDB, Redis, Qdrant
 	docker compose up -d
@@ -20,6 +20,9 @@ web:              ## analyst console on :5173
 
 seed:             ## (re)load the initial corpus into all four stores
 	cd backend && ../.venv/bin/python -m app.seed
+
+import-feeds:     ## add real public threat intel (MITRE ATT&CK, abuse.ch Feodo Tracker, Emerging Threats); restart the API after
+	cd backend && ../.venv/bin/python -m scripts.import_feeds $(ARGS)
 
 llm:              ## pull the local model (Ollama must be running)
 	ollama pull llama3.2:3b
@@ -65,6 +68,9 @@ cloud-check: cloud-env  ## test the four hosted databases in .env.cloud (read-on
 
 cloud-seed: cloud-env   ## load the corpus into the hosted databases (replaces what they contain)
 	cd backend && $(CLOUD) ../.venv/bin/python -m app.seed
+
+cloud-import-feeds: cloud-env  ## same real threat intel into the hosted databases (after cloud-seed)
+	cd backend && $(CLOUD) ../.venv/bin/python -m scripts.import_feeds $(ARGS)
 
 cloud-api: cloud-env    ## API on :8000 against the hosted databases (stop the cti-api container first); then make web
 	cd backend && $(CLOUD) ../.venv/bin/uvicorn app.main:app --port 8000
