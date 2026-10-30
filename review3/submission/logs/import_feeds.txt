@@ -1,0 +1,15 @@
+cd backend && ../.venv/bin/python -m scripts.import_feeds 
+1/5 feeds
+  downloading https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json
+  downloading https://feodotracker.abuse.ch/downloads/ipblocklist.json
+  downloading https://feodotracker.abuse.ch/downloads/ipblocklist_aggressive.csv
+  downloading https://rules.emergingthreats.net/blockrules/compromised-ips.txt
+2/5 Neo4j      ATT&CK 20.0: mapping onto the existing graph
+    57 Campaign, 178 ThreatActor, 842 Malware, 227 Technique; 16678 ATT&CK relationships; graph now 2216 nodes, 18478 relationships
+3/5 MongoDB    237 reports upserted
+4/5 Redis      557 feed IPs on the blocklist ([('Emerging Threats compromised hosts', 536), ('abuse.ch Feodo Tracker', 21)])
+5/5 Qdrant     refitting the embedder and re-indexing every report
+    794 chunks
+done in 28 s — restart the API so it loads the refitted embedder
+
+[exited with code 0]

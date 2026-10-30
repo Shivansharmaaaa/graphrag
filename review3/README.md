@@ -5,6 +5,7 @@
 | Final report | `Final_Report_GraphRAG_CTI_Platform.pdf` / `.docx` | `node generate_report.js` |
 | User manual | `User_Manual_GraphRAG_CTI_Platform.pdf` / `.docx` | `node generate_manual.js` |
 | Presentation (with speaker notes) | `Presentation_GraphRAG_CTI_Platform.pptx` / `.pdf` | `node generate_slides.js` |
+| Submission: working system and live databases | `Review3_Submission_GraphRAG_CTI_Platform.pdf` / `.docx` | `node capture_submission.js submission/screenshots`, then `node generate_submission.js` (screenshots and terminal output in `submission/`) |
 | Demo runbook and viva preparation | `DEMO_RUNBOOK.md` | — |
 | Showing the four databases live | `DATABASE_TOUR.md` | `make dbui` (from the project root) |
 | Performance results | `performance/*.json` | `make bench`, `make eval` |

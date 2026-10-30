@@ -1,0 +1,4 @@
+$ make test   # 2026-10-30 20:57 IST
+cd backend && ../.venv/bin/python -m pytest -q
+..................                                                       [100%]
+18 passed, 16 deselected in 1.46s

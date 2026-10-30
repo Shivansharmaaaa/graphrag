@@ -1,0 +1,4 @@
+$ make test-integration   # 2026-10-30 21:08 IST
+cd backend && ../.venv/bin/python -m pytest -q -m integration
+................                                                         [100%]
+16 passed, 18 deselected in 2.66s

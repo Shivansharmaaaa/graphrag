@@ -1,0 +1,18 @@
+$ docker exec cti-neo4j cypher-shell -u neo4j -p *** "MATCH (n) RETURN labels(n)[0] AS label, count(*) AS nodes ORDER BY nodes DESC"
+label, nodes
+"Malware", 843
+"Indicator", 618
+"Report", 250
+"Technique", 227
+"ThreatActor", 178
+"Campaign", 63
+"Infrastructure", 35
+"Victim", 9
+
+$ docker exec cti-neo4j cypher-shell -u neo4j -p *** "MATCH ()-[r]->() RETURN count(r) AS relationships"
+relationships
+18491
+
+$ docker exec cti-neo4j cypher-shell -u neo4j -p *** "CALL dbms.components() YIELD name, versions, edition"
+name, versions, edition
+"Neo4j Kernel", ["5.26.31"], "community"

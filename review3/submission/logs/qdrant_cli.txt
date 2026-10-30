@@ -1,0 +1,25 @@
+$ curl -s localhost:6333/   # .version
+1.13.4
+$ curl -s localhost:6333/collections/threat_chunks   # selected fields of .result
+{
+  "status": "green",
+  "points_count": 796,
+  "vectors": {
+    "size": 64,
+    "distance": "Cosine"
+  },
+  "hnsw_config": {
+    "m": 16,
+    "ef_construct": 100,
+    "full_scan_threshold": 10000
+  },
+  "payload_schema": {
+    "date_ts": "integer",
+    "report_id": "keyword",
+    "actors": "keyword",
+    "tlp": "keyword"
+  }
+}
+$ curl -s -X POST localhost:6333/collections/threat_chunks/points/count -H 'content-type: application/json' \
+    -d '{"filter":{"must":[{"key":"source","match":{"value":"abuse.ch Feodo Tracker"}}]},"exact":true}'
+{"result":{"count":7},"status":"ok","time":0.001856844}

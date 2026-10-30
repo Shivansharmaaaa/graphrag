@@ -1,0 +1,26 @@
+# Live API checks against the local stack — 2026-10-30 20:58 IST
+
+$ curl -s localhost:8000/api/health   # .stores, one line per store
+  neo4j    ok=True  2216 nodes · localhost  (5.55 ms)
+  mongodb  ok=True  249 reports · localhost  (5.74 ms)
+  redis    ok=True  563 live IOCs · localhost  (1.18 ms)
+  qdrant   ok=True  server: threat_chunks (794 chunks) · localhost  (11.38 ms)
+  llm      ok=True  ollama · llama3.2:3b  (19.63 ms)
+
+# 1. firewall / EDR enforcement lookup (Redis only) for a QakBot C2 server from abuse.ch Feodo Tracker
+$ curl -s -H "X-API-Key: $CONSUMER_API_KEY" "localhost:8000/api/enforce/check?type=ip&value=50.16.16.211"
+{"blocked":true,"ttl_remaining":604698,"severity":"critical"}
+
+# 2. an address that is not on the blocklist
+$ curl -s -H "X-API-Key: $CONSUMER_API_KEY" "localhost:8000/api/enforce/check?type=ip&value=8.8.8.8"
+{"blocked":false,"ttl_remaining":0,"severity":null}
+
+# 3. the IP gate: an API request arriving from that C2 address is refused
+$ curl -s -w "  HTTP %{http_code}\n" -H "X-Forwarded-For: 50.16.16.211" localhost:8000/api/reports
+{"detail":"50.16.16.211 is on the IOC blocklist","blocked":true,"ttl_remaining":604698,"severity":"critical"}  HTTP 403
+$ curl -s -w "  HTTP %{http_code}\n" -H "X-Forwarded-For: 34.204.119.63" -X POST localhost:8000/api/auth/login -d "{}"
+{"detail":"34.204.119.63 is on the IOC blocklist","blocked":true,"ttl_remaining":259098,"severity":"high"}  HTTP 403
+
+# 4. the same request from an ordinary address reaches the API (401: no token yet)
+$ curl -s -w "  HTTP %{http_code}\n" -H "X-Forwarded-For: 8.8.8.8" localhost:8000/api/reports
+{"detail":"authentication required"}  HTTP 401

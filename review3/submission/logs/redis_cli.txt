@@ -1,0 +1,16 @@
+$ docker exec cti-redis redis-cli INFO server | grep redis_version
+redis_version:7.4.11
+$ docker exec cti-redis redis-cli DBSIZE
+566
+$ docker exec cti-redis redis-cli ZCOUNT ioc:index -inf +inf
+565
+$ docker exec cti-redis redis-cli GET ioc:ip:50.16.16.211
+{"value": "50.16.16.211", "type": "ip", "actor": null, "campaign": null, "severity": "critical", "ttl": 604800, "published_by": "import-feeds", "published_at": 1793374036, "source": "abuse.ch Feodo Tracker", "malware": "QakBot"}
+$ docker exec cti-redis redis-cli TTL ioc:ip:50.16.16.211
+604227
+$ docker exec cti-redis redis-cli GET ioc:ip:34.204.119.63
+{"value": "34.204.119.63", "type": "ip", "actor": null, "campaign": null, "severity": "high", "ttl": 259200, "published_by": "import-feeds", "published_at": 1793374036, "source": "abuse.ch Feodo Tracker", "malware": "QakBot"}
+$ docker exec cti-redis redis-cli TTL ioc:ip:34.204.119.63
+258627
+$ docker exec cti-redis redis-cli EXISTS ioc:ip:8.8.8.8
+0

@@ -1,0 +1,8 @@
+$ docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}' | grep -v cloud   # 2026-10-30 21:06 IST
+NAMES                       IMAGE                                     STATUS
+cti-mongo-express           mongo-express:1.0.2-20-alpine3.19         Up 3 minutes
+cti-redis-commander         ghcr.io/joeferner/redis-commander:0.9.1   Up 4 days (healthy)
+cti-redis                   redis:7-alpine                            Up 4 days (healthy)
+cti-qdrant                  qdrant/qdrant:v1.13.4                     Up 4 days (healthy)
+cti-mongo                   mongo:7                                   Up 4 days (healthy)
+cti-neo4j                   neo4j:5.26-community                      Up 4 days (healthy)

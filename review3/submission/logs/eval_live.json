@@ -1,0 +1,166 @@
+{
+  "ts": 1793374705,
+  "latency": {
+    "redis_get_p99_ms": 1.27,
+    "redis_slo_p99_lt_5ms": true,
+    "graph_1hop_p95_ms": 12.69,
+    "graph_2hop_p95_ms": 21.4,
+    "graph_3hop_p95_ms": 261.79,
+    "graph_slo_p95_lt_500ms": true
+  },
+  "graphrag": {
+    "questions": [
+      {
+        "question": "Which threat actors share command-and-control infrastructure, and what malware was hosted there?",
+        "mode": "llm",
+        "gold_edges_recalled": "2/2",
+        "gold_reports_recalled": "1/1",
+        "citation_coverage": 0.8,
+        "refused": false,
+        "latency_ms": 9177.4
+      },
+      {
+        "question": "How is APT29 connected to supply-chain compromises, and which reports describe SUNBURST?",
+        "mode": "llm",
+        "gold_edges_recalled": "1/1",
+        "gold_reports_recalled": "1/1",
+        "citation_coverage": 1.0,
+        "refused": false,
+        "latency_ms": 9779.0
+      },
+      {
+        "question": "Who else uses Cobalt Strike besides FIN7, and do they share any domains?",
+        "mode": "llm",
+        "gold_edges_recalled": "2/2",
+        "gold_reports_recalled": "1/1",
+        "citation_coverage": 0.5,
+        "refused": false,
+        "latency_ms": 6417.5
+      },
+      {
+        "question": "What destructive campaigns is Sandworm responsible for, and does it share any infrastructure with APT28?",
+        "mode": "llm",
+        "gold_edges_recalled": "2/2",
+        "gold_reports_recalled": "1/1",
+        "citation_coverage": 1.0,
+        "refused": false,
+        "latency_ms": 6398.3
+      },
+      {
+        "question": "Find activity similar to spearphishing against government and political organizations.",
+        "mode": "llm",
+        "gold_edges_recalled": "0/0",
+        "gold_reports_recalled": "1/1",
+        "citation_coverage": 0.8,
+        "refused": false,
+        "latency_ms": 10563.7
+      },
+      {
+        "question": "Why is Mimikatz a weak attribution signal, and which actors still use it?",
+        "mode": "llm",
+        "gold_edges_recalled": "2/2",
+        "gold_reports_recalled": "1/1",
+        "citation_coverage": 0.5,
+        "refused": false,
+        "latency_ms": 10530.7,
+        "commodity_caution_present": true
+      }
+    ],
+    "mean_citation_coverage": 0.767,
+    "gold_edge_recall": 1.0,
+    "gold_report_recall": 1.0,
+    "p95_ms": 10563.7,
+    "slo_p95_lt_15s": true
+  },
+  "blocklist_freshness": {
+    "live_before_expiry": true,
+    "live_after_expiry": false,
+    "ok": true
+  },
+  "integrity": {
+    "ok": true,
+    "rules": [
+      {
+        "rule": "Every MongoDB _id has a Report node",
+        "violations": [],
+        "ok": true
+      },
+      {
+        "rule": "Every Report node has a MongoDB document",
+        "violations": [],
+        "ok": true
+      },
+      {
+        "rule": "Every Qdrant point.report_id exists in MongoDB",
+        "violations": [],
+        "ok": true
+      },
+      {
+        "rule": "Redis IOCs traceable to an Indicator node or a document iocs[] (informational \u2014 operators may publish new IOCs, FR12)",
+        "violations": [],
+        "ok": true
+      },
+      {
+        "rule": "Every MongoDB report has chunks in Qdrant (informational)",
+        "violations": [],
+        "ok": true
+      }
+    ],
+    "counts": {
+      "mongodb_reports": 250,
+      "report_nodes": 250,
+      "qdrant_reports": 250,
+      "redis_live": 565
+    }
+  },
+  "process_latency_summary": {
+    "redis": {
+      "count": 514,
+      "p50_ms": 0.38,
+      "p95_ms": 0.77,
+      "p99_ms": 1.91,
+      "slo": "p99 < 5 ms",
+      "slo_met": true
+    },
+    "neo4j": {
+      "count": 123,
+      "p50_ms": 11.27,
+      "p95_ms": 232.75,
+      "p99_ms": 277.14,
+      "slo": "p95 < 500 ms",
+      "slo_met": true
+    },
+    "linking": {
+      "count": 6,
+      "p50_ms": 3.13,
+      "p95_ms": 206.63,
+      "p99_ms": 206.63
+    },
+    "qdrant": {
+      "count": 6,
+      "p50_ms": 15.15,
+      "p95_ms": 34.34,
+      "p99_ms": 34.34
+    },
+    "mongodb": {
+      "count": 6,
+      "p50_ms": 2.7,
+      "p95_ms": 3.44,
+      "p99_ms": 3.44
+    },
+    "llm": {
+      "count": 6,
+      "p50_ms": 9068.5,
+      "p95_ms": 10217.71,
+      "p99_ms": 10217.71
+    },
+    "graphrag": {
+      "count": 6,
+      "p50_ms": 9177.4,
+      "p95_ms": 10563.7,
+      "p99_ms": 10563.7,
+      "slo": "p95 < 15000 ms",
+      "slo_met": true
+    }
+  }
+}
